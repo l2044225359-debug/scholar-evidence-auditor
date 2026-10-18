@@ -363,3 +363,69 @@ export function retryJob(id: string) {
     .run(id);
   return getJob(id);
 }
+
+export type AuditRow = {
+  id: string;
+  user_id: string;
+  conversation_id: string | null;
+  status: "queued" | "running" | "completed" | "failed";
+  input_json: string;
+  result_json: string | null;
+  markdown: string | null;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export function createAuditJob({
+  userId,
+  question,
+  fileIds,
+}: {
+  userId: string;
+  question: string;
+  fileIds: string[] | null;
+}) {
+  const db = getDb();
+  const id = randomUUID();
+  const timestamp = nowIso();
+  const input = { question, fileIds };
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare(
+      `INSERT INTO audit_reports (
+        id, user_id, status, input_json, created_at, updated_at
+      ) VALUES (?, ?, 'queued', ?, ?, ?)`,
+    ).run(id, userId, JSON.stringify(input), timestamp, timestamp);
+    db.prepare(
+      `INSERT INTO jobs (
+        id, user_id, kind, status, payload_json, progress, message, created_at
+      ) VALUES (?, ?, 'audit', 'queued', ?, 0, '等待审计', ?)`,
+    ).run(
+      id,
+      userId,
+      JSON.stringify({ auditId: id, question, fileIds }),
+      timestamp,
+    );
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+  return getAudit(id)!;
+}
+
+export function getAudit(id: string): AuditRow | undefined {
+  return getDb()
+    .prepare("SELECT * FROM audit_reports WHERE id = ?")
+    .get(id) as AuditRow | undefined;
+}
+
+export function listAudits(userId: string, limit = 30): AuditRow[] {
+  return getDb()
+    .prepare(
+      `SELECT * FROM audit_reports
+       WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
+    )
+    .all(userId, limit) as AuditRow[];
+}

@@ -110,7 +110,7 @@ function claimNextJob() {
     const job = database
       .prepare(
         `SELECT * FROM jobs
-         WHERE status = 'queued' AND kind = 'index_pdf'
+         WHERE status = 'queued' AND kind IN ('index_pdf', 'audit')
          ORDER BY created_at LIMIT 1`,
       )
       .get();
@@ -124,7 +124,10 @@ function claimNextJob() {
       .prepare(
         `UPDATE jobs
          SET status = 'running', progress = 15,
-             message = 'Uploading PDF to Docling parser',
+             message = CASE
+               WHEN kind = 'audit' THEN 'Starting evidence audit'
+               ELSE 'Uploading PDF to Docling parser'
+             END,
              started_at = ?, error = NULL
          WHERE id = ?`,
       )
@@ -156,7 +159,63 @@ function finishJob(id, status, fields) {
     );
 }
 
-async function processJob(job) {
+function updateAudit(id, fields) {
+  database
+    .prepare(
+      `UPDATE audit_reports
+       SET status = ?, result_json = ?, markdown = ?, error = ?, updated_at = ?
+       WHERE id = ?`,
+    )
+    .run(
+      fields.status,
+      fields.result ? JSON.stringify(fields.result) : null,
+      fields.markdown ?? null,
+      fields.error ?? null,
+      new Date().toISOString(),
+      id,
+    );
+}
+
+async function processAuditJob(job) {
+  const payload = JSON.parse(job.payload_json);
+  database
+    .prepare(
+      "UPDATE jobs SET progress = 25, message = ? WHERE id = ?",
+    )
+    .run("Hybrid retrieval, claim extraction and verification", job.id);
+  updateAudit(payload.auditId, { status: "running" });
+
+  const headers = { "Content-Type": "application/json" };
+  if (bffToken) headers["X-BFF-Token"] = bffToken;
+  const response = await fetch(`${bffUrl}/api/bff/audit`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      question: payload.question,
+      file_ids: payload.fileIds,
+      language: "zh",
+    }),
+    signal: AbortSignal.timeout(5 * 60 * 1000),
+  });
+  const report = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(report.detail ?? report.message ?? `HTTP ${response.status}`);
+  }
+
+  updateAudit(payload.auditId, {
+    status: "completed",
+    result: report,
+    markdown: report.markdown,
+  });
+  finishJob(job.id, "completed", {
+    progress: 100,
+    message: "Evidence audit completed",
+    result: { auditId: payload.auditId },
+  });
+  console.log(`Completed audit ${payload.auditId}`);
+}
+
+async function processPdfJob(job) {
   const payload = JSON.parse(job.payload_json);
   const filePath = resolve(payload.filePath);
   if (!filePath.startsWith(uploadDir)) {
@@ -205,6 +264,14 @@ async function processJob(job) {
   console.log(`Completed job ${job.id}: ${payload.fileName}`);
 }
 
+async function processJob(job) {
+  if (job.kind === "audit") {
+    await processAuditJob(job);
+  } else {
+    await processPdfJob(job);
+  }
+}
+
 async function main() {
   console.log(`Index worker ${process.pid} started.`);
   while (true) {
@@ -226,6 +293,17 @@ async function main() {
         message: "Indexing failed",
         error: message,
       });
+      if (job.kind === "audit") {
+        try {
+          const payload = JSON.parse(job.payload_json);
+          updateAudit(payload.auditId, {
+            status: "failed",
+            error: message,
+          });
+        } catch {
+          // Job payload is already invalid; keep the failed job record.
+        }
+      }
       console.error(`Failed job ${job.id}: ${message}`);
     }
   }

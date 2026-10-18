@@ -58,6 +58,9 @@ publicly without HTTPS, secret rotation and a reviewed network boundary.
 Administrator PDF ingestion is serialized through a single SQLite-backed worker.
 See `docs/document-ingestion.md`.
 
+Evidence audits extract claims, map page evidence, verify numbers and citation
+integrity, and generate JSON or printable reports. See `docs/evidence-audit.md`.
+
 ## One-command start
 
 ```powershell

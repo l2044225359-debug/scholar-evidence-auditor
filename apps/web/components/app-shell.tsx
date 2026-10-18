@@ -8,6 +8,7 @@ import {
   LogOut,
   Network,
   Server,
+  ScanSearch,
   ShieldCheck,
   UserCircle,
 } from "lucide-react";
@@ -32,10 +33,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     { href: "/", labelKey: "nav.workspace", icon: BookOpen },
     { href: "/documents", labelKey: "nav.documents", icon: Library },
     { href: "/citations", labelKey: "nav.citations", icon: Network },
+    { href: "/audit", labelKey: "nav.audit", icon: ScanSearch },
     { href: "/system", labelKey: "nav.system", icon: Server },
   ];
   if (session?.user?.role === "admin") {
-    navigation.splice(3, 0, {
+    navigation.splice(4, 0, {
       href: "/admin",
       labelKey: "nav.admin",
       icon: ShieldCheck,

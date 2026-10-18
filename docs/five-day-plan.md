@@ -20,10 +20,13 @@ Status: completed.
 
 ## Day 3
 
+Status: completed.
+
 - Claim extraction
 - Numeric and citation verification
 - Evidence-insufficient and contradiction verdicts
 - JSON and printable audit report
+- Queued audits with the global single worker
 
 ## Day 4
 

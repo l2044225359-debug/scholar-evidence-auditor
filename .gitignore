@@ -1,0 +1,30 @@
+# Local application state
+apps/web/node_modules/
+apps/web/.next/
+apps/web/.env*.local
+apps/web/tsconfig.tsbuildinfo
+data/*
+!data/.gitkeep
+work/
+outputs/
+
+# WSL runtime state and secrets
+services/kotaemon/.env
+services/kotaemon/.venv/
+services/kotaemon/ktem_app_data/
+services/kotaemon/__pycache__/
+services/kotaemon/**/__pycache__/
+services/kotaemon/*.log
+services/kotaemon/*.pid
+services/citation-graph/.env
+services/citation-graph/cache/
+services/citation-graph/exports/
+services/citation-graph/*.log
+services/citation-graph/*.pid
+
+# General
+*.pyc
+*.tmp
+*.pid
+.DS_Store
+Thumbs.db

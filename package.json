@@ -1,0 +1,15 @@
+{
+  "name": "scientific-evidence-auditor",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "demo:init": "npm --prefix apps/web run demo:init",
+    "demo:start": "powershell -ExecutionPolicy Bypass -File scripts/run-demo.ps1",
+    "demo:health": "powershell -ExecutionPolicy Bypass -File scripts/healthcheck.ps1",
+    "services:sync": "powershell -ExecutionPolicy Bypass -File scripts/sync-services.ps1",
+    "web:dev": "npm --prefix apps/web run dev",
+    "web:build": "npm --prefix apps/web run build",
+    "web:start": "npm --prefix apps/web run start",
+    "web:lint": "npm --prefix apps/web run lint"
+  }
+}

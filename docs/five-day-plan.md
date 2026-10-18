@@ -10,9 +10,13 @@
 
 ## Day 2
 
+Status: completed.
+
 - Admin PDF upload
 - Global single-worker indexing queue
 - Indexing status in the Next.js document library
+- Original filename preservation
+- Failed-job retry and admin deletion
 
 ## Day 3
 

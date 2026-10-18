@@ -56,6 +56,19 @@ export function getDb(): DatabaseSync {
     throw new Error(`Database schema not found: ${schemaPath}`);
   }
   db.exec(readFileSync(schemaPath, "utf8"));
+  const jobColumns = new Set(
+    (
+      db.prepare("PRAGMA table_info(jobs)").all() as Array<{ name: string }>
+    ).map((column) => column.name),
+  );
+  if (!jobColumns.has("progress")) {
+    db.exec(
+      "ALTER TABLE jobs ADD COLUMN progress INTEGER NOT NULL DEFAULT 0",
+    );
+  }
+  if (!jobColumns.has("message")) {
+    db.exec("ALTER TABLE jobs ADD COLUMN message TEXT");
+  }
 
   globalDatabase.__scholarDb = db;
   return db;
@@ -281,4 +294,72 @@ export function usageCountSince(
     )
     .get(userId, kind, sinceIso) as { count: number };
   return Number(row.count);
+}
+
+export type JobRow = {
+  id: string;
+  user_id: string;
+  kind: string;
+  status: "queued" | "running" | "completed" | "failed";
+  payload_json: string;
+  result_json: string | null;
+  error: string | null;
+  progress: number;
+  message: string | null;
+  created_at: string;
+  started_at: string | null;
+  finished_at: string | null;
+};
+
+export function createIndexJob({
+  id,
+  userId,
+  filePath,
+  fileName,
+  size,
+}: {
+  id: string;
+  userId: string;
+  filePath: string;
+  fileName: string;
+  size: number;
+}) {
+  getDb()
+    .prepare(
+      `INSERT INTO jobs (
+        id, user_id, kind, status, payload_json, progress, message, created_at
+      ) VALUES (?, ?, 'index_pdf', 'queued', ?, 0, '等待索引', ?)`,
+    )
+    .run(
+      id,
+      userId,
+      JSON.stringify({ filePath, fileName, size }),
+      nowIso(),
+    );
+  return getJob(id)!;
+}
+
+export function getJob(id: string): JobRow | undefined {
+  return getDb()
+    .prepare("SELECT * FROM jobs WHERE id = ?")
+    .get(id) as JobRow | undefined;
+}
+
+export function listJobs(limit = 30): JobRow[] {
+  return getDb()
+    .prepare("SELECT * FROM jobs ORDER BY created_at DESC LIMIT ?")
+    .all(limit) as JobRow[];
+}
+
+export function retryJob(id: string) {
+  getDb()
+    .prepare(
+      `UPDATE jobs
+       SET status = 'queued', progress = 0, message = '等待重试',
+           error = NULL, result_json = NULL, started_at = NULL,
+           finished_at = NULL
+       WHERE id = ? AND status = 'failed'`,
+    )
+    .run(id);
+  return getJob(id);
 }

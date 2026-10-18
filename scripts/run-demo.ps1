@@ -61,6 +61,20 @@ if (-not (Test-HttpOk -Url "http://127.0.0.1:8001/api/health")) {
   throw "Citation graph service failed to start on port 8001."
 }
 
+$workerLock = Join-Path $repoRoot "work/index-worker.lock"
+if (-not (Test-Path $workerLock)) {
+  $logDir = Join-Path $repoRoot "work"
+  New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+  $nodePath = (Get-Command node).Source
+  $workerProcess = Start-Process `
+    -FilePath $nodePath `
+    -ArgumentList @("scripts/index-worker.mjs") `
+    -WorkingDirectory $webRoot `
+    -WindowStyle Hidden `
+    -PassThru
+  $workerProcess.Id | Set-Content (Join-Path $logDir "index_worker.pid")
+}
+
 if (-not (Test-HttpOk -Url "http://127.0.0.1:3000/login")) {
   $nodePath = (Get-Command node).Source
   $nextProcess = Start-Process `

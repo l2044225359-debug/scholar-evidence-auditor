@@ -66,6 +66,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   payload_json TEXT NOT NULL,
   result_json TEXT,
   error TEXT,
+  progress INTEGER NOT NULL DEFAULT 0,
+  message TEXT,
   created_at TEXT NOT NULL,
   started_at TEXT,
   finished_at TEXT,

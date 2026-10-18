@@ -4,18 +4,21 @@ import html
 import json
 import os
 import re
+import tempfile
 import time
 import uuid
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from threading import Lock
 from typing import Literal
 
 from bs4 import BeautifulSoup
-from fastapi import HTTPException, Request
+from fastapi import File, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlmodel import Session, select
+from starlette.concurrency import run_in_threadpool
 
 from ktem.db.engine import engine
 from ktem.db.models import User
@@ -308,9 +311,10 @@ def register_chat_bff(api, app) -> None:
         return {
             "status": "ok",
             "service": "kotaemon-chat-bff",
-            "version": "1.1",
+            "version": "1.2",
             "default_user_id": _default_user_id(),
             "sessions": len(SESSIONS._items),
+            "pdf_indexing": True,
             "models": {
                 "flash": os.getenv("OPENAI_CHAT_MODEL", "qwen3.8-flash"),
                 "complex": os.getenv(
@@ -340,6 +344,86 @@ def register_chat_bff(api, app) -> None:
                 status_code=500,
                 content={"error": "files_unavailable", "message": str(exc)},
             )
+
+    def delete_file(file_id: str, request: Request):
+        _check_token(request)
+        user_id = _default_user_id()
+        existing = {
+            item["id"]
+            for item in _files_for_user(app, user_id)
+        }
+        if file_id not in existing:
+            raise HTTPException(status_code=404, detail="File not found")
+        app._index_1.delete_event(file_id)
+        return {"status": "deleted", "file_id": file_id}
+
+    async def index_pdf(
+        request: Request,
+        file: UploadFile = File(...),
+    ):
+        _check_token(request)
+        user_id = _default_user_id()
+        if not file.filename or not file.filename.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="Only PDF files are supported")
+
+        safe_name = Path(file.filename).name
+        if not safe_name.lower().endswith(".pdf"):
+            raise HTTPException(status_code=400, detail="Invalid PDF name")
+        try:
+            with tempfile.TemporaryDirectory(
+                prefix="kotaemon_upload_"
+            ) as temp_dir:
+                temp_path = os.path.join(temp_dir, safe_name)
+                total = 0
+                first_chunk = True
+                with open(temp_path, "wb") as temp_file:
+                    while chunk := await file.read(1024 * 1024):
+                        if first_chunk:
+                            first_chunk = False
+                            if not chunk.startswith(b"%PDF"):
+                                raise HTTPException(
+                                    status_code=400,
+                                    detail="Invalid PDF signature",
+                                )
+                        total += len(chunk)
+                        if total > 100 * 1024 * 1024:
+                            raise HTTPException(
+                                status_code=413,
+                                detail="PDF exceeds 100 MB",
+                            )
+                        temp_file.write(chunk)
+
+                if total == 0:
+                    raise HTTPException(status_code=400, detail="Empty PDF")
+
+                settings = _settings_for_user(app, user_id)
+                ids = await run_in_threadpool(
+                    app._index_1.index_fn_file_with_default_loaders,
+                    [temp_path],
+                    False,
+                    settings,
+                    user_id,
+                )
+                available_items = _files_for_user(app, user_id)
+                items = {item["id"]: item for item in available_items}
+                matched_items = [
+                    item
+                    for item in available_items
+                    if item["name"] == safe_name
+                ]
+                if not any(ids):
+                    ids = [item["id"] for item in matched_items]
+                return {
+                    "status": "indexed",
+                    "file_ids": ids,
+                    "files": [
+                        items[file_id]
+                        for file_id in ids
+                        if file_id in items
+                    ],
+                }
+        except Exception:
+            raise
 
     def chat_stream(payload: ChatRequest, request: Request):
         _check_token(request)
@@ -512,6 +596,12 @@ def register_chat_bff(api, app) -> None:
 
     api.add_api_route("/api/bff/health", health, methods=["GET"])
     api.add_api_route("/api/bff/files", files, methods=["GET"])
+    api.add_api_route(
+        "/api/bff/files/{file_id}",
+        delete_file,
+        methods=["DELETE"],
+    )
+    api.add_api_route("/api/bff/index", index_pdf, methods=["POST"])
     api.add_api_route(
         "/api/bff/chat/stream",
         chat_stream,

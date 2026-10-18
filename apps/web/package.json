@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "tsc --noEmit",
     "demo:init": "node scripts/init-demo.mjs",
-    "demo:rotate-invite": "node scripts/rotate-invite.mjs"
+    "demo:rotate-invite": "node scripts/rotate-invite.mjs",
+    "worker:index": "node scripts/index-worker.mjs"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

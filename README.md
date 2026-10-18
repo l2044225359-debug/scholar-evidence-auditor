@@ -55,6 +55,9 @@ npm --prefix apps/web run start
 The application is designed for a trusted local network. Do not expose it
 publicly without HTTPS, secret rotation and a reviewed network boundary.
 
+Administrator PDF ingestion is serialized through a single SQLite-backed worker.
+See `docs/document-ingestion.md`.
+
 ## One-command start
 
 ```powershell

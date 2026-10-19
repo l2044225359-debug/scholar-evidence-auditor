@@ -1,0 +1,13 @@
+tunnel: scholar-demo
+credentials-file: C:\Users\<USER>\.cloudflared\<TUNNEL_ID>.json
+
+ingress:
+  - hostname: scholar.example.com
+    service: http://localhost:3000
+    originRequest:
+      connectTimeout: 30s
+      noHappyEyeballs: true
+  - service: http_status:404
+
+# The public hostname terminates TLS at Cloudflare and forwards only to the
+# authenticated Next.js application. Do not add 7860, 8001, or 8002 here.

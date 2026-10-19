@@ -30,14 +30,25 @@ Status: completed.
 
 ## Day 4
 
+Status: completed.
+
 - LAN access
 - Reverse proxies for citation graph and PDF previews
 - Thirty-case evaluation set
 - Smoke, SSE and build tests
+- Next.js, BFF, index worker and citation graph hosted together in WSL
+
+See `docs/day4-verification.md` for the verification history and final
+30/30 evaluation result.
 
 ## Day 5
+
+Status: completed.
 
 - Key rotation
 - Demo account reset
 - Final rehearsal
+- Optional English VibeVoice narration through the authenticated BFF
 - Submission package
+
+See `docs/day5-submission.md` for the final runbook and packaging procedure.

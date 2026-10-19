@@ -50,6 +50,27 @@ class GraphRequest(BaseModel):
     enrich_crossref: bool = True
 
 
+class LocalCitationPaper(BaseModel):
+    id: str
+    title: str
+    year: int | None = None
+    authors: list[str] = Field(default_factory=list)
+    arxiv_id: str = ""
+    doi: str = ""
+    abstract: str = ""
+    future_work: list[str] = Field(default_factory=list)
+
+
+class LocalCitationEdge(BaseModel):
+    source: str
+    target: str
+
+
+class LocalGraphRequest(BaseModel):
+    papers: list[LocalCitationPaper]
+    edges: list[LocalCitationEdge] = Field(default_factory=list)
+
+
 def _cache_path(url: str) -> Path:
     key = hashlib.sha256(url.encode("utf-8")).hexdigest()
     return CACHE_DIR / f"{key}.json"
@@ -568,6 +589,125 @@ def search(q: str = Query(min_length=2)):
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
+@app.post("/api/local-graph")
+def create_local_graph(request: LocalGraphRequest):
+    if not request.papers:
+        raise HTTPException(status_code=422, detail="No local papers supplied")
+
+    graph = nx.DiGraph()
+    paper_by_id = {paper.id: paper for paper in request.papers[:20]}
+    for paper in paper_by_id.values():
+        graph.add_node(
+            paper.id,
+            title=paper.title,
+            year=paper.year,
+            authors=paper.authors,
+            arxiv_id=paper.arxiv_id,
+            doi=paper.doi,
+            abstract=paper.abstract,
+            future_work=paper.future_work,
+        )
+    for edge in request.edges:
+        if (
+            edge.source in graph
+            and edge.target in graph
+            and edge.source != edge.target
+        ):
+            graph.add_edge(
+                edge.source,
+                edge.target,
+                relation="cites",
+            )
+
+    pagerank = (
+        nx.pagerank(graph, alpha=0.85)
+        if graph.number_of_nodes()
+        else {}
+    )
+    in_degree = dict(graph.in_degree())
+    out_degree = dict(graph.out_degree())
+    centrality = nx.degree_centrality(graph)
+    nodes = []
+    for node_id, attrs in graph.nodes(data=True):
+        nodes.append(
+            {
+                "id": node_id,
+                **attrs,
+                "pagerank": round(float(pagerank.get(node_id, 0)), 8),
+                "in_degree": int(in_degree.get(node_id, 0)),
+                "out_degree": int(out_degree.get(node_id, 0)),
+                "degree_centrality": round(
+                    float(centrality.get(node_id, 0)),
+                    6,
+                ),
+            }
+        )
+    nodes.sort(
+        key=lambda item: (
+            item["pagerank"],
+            item["in_degree"],
+            item.get("year") or 0,
+        ),
+        reverse=True,
+    )
+    foundational = [
+        {
+            "id": node["id"],
+            "title": node["title"],
+            "year": node.get("year"),
+            "pagerank": node["pagerank"],
+            "in_degree": node["in_degree"],
+            "authors": node.get("authors", []),
+        }
+        for node in nodes[: min(8, len(nodes))]
+    ]
+    frontier = sorted(
+        nodes,
+        key=lambda item: (
+            item.get("year") or 0,
+            item["degree_centrality"],
+        ),
+        reverse=True,
+    )[:5]
+    components = (
+        nx.number_weakly_connected_components(graph)
+        if graph.number_of_nodes()
+        else 0
+    )
+    return {
+        "summary": {
+            "paper_count": graph.number_of_nodes(),
+            "edge_count": graph.number_of_edges(),
+            "component_count": components,
+            "density": round(nx.density(graph), 6)
+            if graph.number_of_nodes() > 1
+            else 0,
+            "max_pagerank": max(pagerank.values(), default=0),
+            "generated_at": datetime.now(UTC).isoformat(),
+            "limit": 20,
+        },
+        "nodes": nodes,
+        "edges": [
+            {
+                "source": source,
+                "target": target,
+                "relation": attrs.get("relation", "cites"),
+            }
+            for source, target, attrs in graph.edges(data=True)
+        ],
+        "foundational": foundational,
+        "frontier": [
+            {
+                "id": node["id"],
+                "title": node["title"],
+                "year": node.get("year"),
+                "pagerank": node["pagerank"],
+            }
+            for node in frontier
+        ],
+    }
+
+
 @app.post("/api/graph")
 def create_graph(request: GraphRequest):
     try:
@@ -594,80 +734,112 @@ INDEX_HTML = r"""
   <style>
     :root {
       color-scheme: light;
-      --bg: #f3f5f6;
-      --panel: #ffffff;
-      --text: #172126;
-      --muted: #66737a;
-      --border: #d8dee2;
-      --accent: #0f766e;
-      --accent-soft: #dff4ef;
-      --citation: #d97706;
-      --seed: #b42318;
+      --bg: #e7ebe7;
+      --panel: #f8f9f5;
+      --text: #172326;
+      --muted: #60716f;
+      --border: #c8d1cd;
+      --border-strong: #9dafaa;
+      --accent: #315d68;
+      --accent-soft: #dce8e3;
+      --citation: #9b681c;
+      --seed: #a84732;
+      --rubric-soft: #f1ded8;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system,
-        BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font: 13px/1.45 "Segoe UI", "Microsoft YaHei", ui-sans-serif,
+        system-ui, sans-serif;
     }
     button, input, select { font: inherit; }
     .app { min-height: 100vh; display: flex; flex-direction: column; }
     header {
       display: flex; align-items: center; justify-content: space-between;
-      gap: 24px; padding: 18px 24px; border-bottom: 1px solid var(--border);
+      gap: 24px; padding: 16px 24px; border-bottom: 1px solid var(--border);
       background: var(--panel);
     }
-    h1 { margin: 0; font-size: 20px; letter-spacing: 0; }
+    h1 {
+      margin: 0; font-family: Georgia, "Times New Roman", serif;
+      font-size: 25px; letter-spacing: -.02em;
+    }
     .sub { color: var(--muted); margin-top: 2px; }
     .status { color: var(--muted); font-size: 12px; white-space: nowrap; }
     .toolbar {
       display: grid; grid-template-columns: minmax(220px, 1fr) 100px 140px
         110px 120px auto; gap: 10px; padding: 14px 24px;
-      border-bottom: 1px solid var(--border); background: var(--panel);
+      border-bottom: 1px solid var(--border); background: var(--bg);
       align-items: end;
     }
     label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
     input, select {
-      height: 38px; border: 1px solid var(--border); border-radius: 6px;
+      height: 38px; border: 1px solid var(--border-strong); border-radius: 1px;
       padding: 0 10px; background: #fff; color: var(--text); min-width: 0;
     }
-    input:focus, select:focus { outline: 2px solid #9fd9d0; border-color: var(--accent); }
+    input:focus, select:focus {
+      outline: 2px solid var(--rubric-soft); border-color: var(--accent);
+    }
     button {
-      height: 38px; border: 0; border-radius: 6px; padding: 0 16px;
+      height: 38px; border: 1px solid var(--accent); border-radius: 1px;
+      padding: 0 16px;
       background: var(--accent); color: white; cursor: pointer;
       font-weight: 650; white-space: nowrap;
     }
-    button:hover { background: #0b5f59; }
+    button:hover { background: #264a53; }
     button.secondary {
-      background: #fff; color: var(--text); border: 1px solid var(--border);
+      background: var(--panel); color: var(--text);
+      border: 1px solid var(--border-strong);
     }
     button:disabled { opacity: .55; cursor: wait; }
     .workspace {
       flex: 1; min-height: 0; display: grid;
       grid-template-columns: minmax(0, 1fr) 310px;
     }
-    .graph-wrap { position: relative; min-height: 560px; overflow: hidden; }
-    canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+    .graph-wrap {
+      position: relative; min-height: 560px; overflow: hidden;
+      background: #f3f5f1;
+    }
+    canvas {
+      width: 100%; height: 100%; display: block; cursor: grab;
+    }
     canvas:active { cursor: grabbing; }
+    canvas:focus-visible {
+      outline: 2px solid var(--seed);
+      outline-offset: -4px;
+    }
     .legend {
       position: absolute; left: 18px; bottom: 18px; display: flex; gap: 16px;
       padding: 9px 12px; background: rgba(255,255,255,.94);
-      border: 1px solid var(--border); border-radius: 6px; font-size: 12px;
+      border: 1px solid var(--border-strong); border-radius: 1px;
+      font-size: 11px;
     }
-    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%;
-      margin-right: 6px; }
+    .dot {
+      display: inline-block; width: 9px; height: 9px; margin-right: 6px;
+    }
+    .dot.seed { border-radius: 0; background: var(--seed); }
+    .dot.reference { border-radius: 50%; background: var(--accent); }
+    .dot.citation {
+      transform: rotate(45deg); border-radius: 0; background: var(--citation);
+    }
     .inspector {
       border-left: 1px solid var(--border); background: var(--panel);
-      padding: 18px; overflow: auto;
+      padding: 18px; overflow: auto; background: #f3f3ee;
     }
     .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .metric { border: 1px solid var(--border); border-radius: 6px; padding: 10px; }
-    .metric b { display: block; font-size: 21px; }
+    .metric {
+      border-top: 1px solid var(--border-strong);
+      border-bottom: 1px solid var(--border-strong); padding: 10px 4px;
+    }
+    .metric b {
+      display: block; font-family: Georgia, serif; font-size: 22px;
+    }
     .metric span { color: var(--muted); font-size: 11px; }
-    h2 { font-size: 13px; margin: 22px 0 10px; text-transform: uppercase;
-      color: var(--muted); letter-spacing: .04em; }
+    h2 {
+      font-family: Georgia, serif; font-size: 15px; margin: 22px 0 10px;
+      text-transform: uppercase; color: var(--text);
+    }
     #details { color: var(--muted); }
     #details strong { color: var(--text); }
     #details a { color: var(--accent); word-break: break-all; }
@@ -716,11 +888,15 @@ INDEX_HTML = r"""
     </form>
     <main class="workspace">
       <section class="graph-wrap">
-        <canvas id="canvas"></canvas>
+        <canvas
+          id="canvas"
+          tabindex="0"
+          aria-label="引用关系图。使用方向键切换论文节点，选中后右侧显示节点详情。"
+        ></canvas>
         <div class="legend">
-          <span><i class="dot" style="background:var(--seed)"></i>种子论文</span>
-          <span><i class="dot" style="background:var(--accent)"></i>参考文献</span>
-          <span><i class="dot" style="background:var(--citation)"></i>被引文献</span>
+          <span><i class="dot seed"></i>种子论文</span>
+          <span><i class="dot reference"></i>参考文献</span>
+          <span><i class="dot citation"></i>被引文献</span>
         </div>
       </section>
       <aside class="inspector">
@@ -827,9 +1003,29 @@ INDEX_HTML = r"""
     }
 
     function nodeColor(n) {
-      if (n.is_seed) return "#b42318";
-      if (n.in_degree > n.out_degree) return "#d97706";
-      return "#0f766e";
+      if (n.is_seed) return "#a84732";
+      if (n.in_degree > n.out_degree) return "#9b681c";
+      return "#315d68";
+    }
+
+    function drawNodeShape(n, radius) {
+      if (n.is_seed) {
+        ctx.fillRect(n.x - radius, n.y - radius, radius * 2, radius * 2);
+        return;
+      }
+      if (n.in_degree > n.out_degree) {
+        ctx.beginPath();
+        ctx.moveTo(n.x, n.y - radius - 1);
+        ctx.lineTo(n.x + radius + 1, n.y);
+        ctx.lineTo(n.x, n.y + radius + 1);
+        ctx.lineTo(n.x - radius - 1, n.y);
+        ctx.closePath();
+        ctx.fill();
+        return;
+      }
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     function draw() {
@@ -863,16 +1059,21 @@ INDEX_HTML = r"""
       for (const n of nodes) {
         const radius = n.is_seed ? 12 : Math.max(6, Math.min(10, 6 + Math.log10((n.cited_by_count || 0) + 1)));
         ctx.fillStyle = nodeColor(n);
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, radius, 0, Math.PI * 2);
-        ctx.fill();
+        drawNodeShape(n, radius);
         if (selected && selected.id === n.id) {
           ctx.strokeStyle = "#111827"; ctx.lineWidth = 2.5;
-          ctx.beginPath(); ctx.arc(n.x, n.y, radius + 4, 0, Math.PI * 2); ctx.stroke();
+          ctx.strokeRect(
+            n.x - radius - 5,
+            n.y - radius - 5,
+            (radius + 5) * 2,
+            (radius + 5) * 2
+          );
         }
         if (scale > .72) {
-          ctx.font = n.is_seed ? "600 12px system-ui" : "11px system-ui";
-          ctx.fillStyle = "#253238";
+          ctx.font = n.is_seed
+            ? "600 12px Georgia, serif"
+            : "11px Georgia, serif";
+          ctx.fillStyle = "#172326";
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
           const label = (n.title || "Untitled").slice(0, 36);
@@ -908,6 +1109,29 @@ INDEX_HTML = r"""
     });
     canvas.addEventListener("pointerup", () => { dragging = false; last = null; });
     canvas.addEventListener("pointerleave", () => { dragging = false; last = null; });
+    canvas.addEventListener("keydown", event => {
+      if (!nodes.length) return;
+      const currentIndex = selected
+        ? nodes.findIndex(n => n.id === selected.id)
+        : -1;
+      if (["ArrowRight", "ArrowDown"].includes(event.key)) {
+        event.preventDefault();
+        selected = nodes[(currentIndex + 1) % nodes.length];
+      } else if (["ArrowLeft", "ArrowUp"].includes(event.key)) {
+        event.preventDefault();
+        selected = nodes[(currentIndex - 1 + nodes.length) % nodes.length];
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        selected = nodes[0];
+      } else if (event.key === "End") {
+        event.preventDefault();
+        selected = nodes[nodes.length - 1];
+      } else {
+        return;
+      }
+      renderDetails(selected);
+      draw();
+    });
     canvas.addEventListener("wheel", e => {
       e.preventDefault();
       scale = Math.max(.45, Math.min(2.4, scale * (e.deltaY > 0 ? .92 : 1.08)));
@@ -947,7 +1171,7 @@ INDEX_HTML = r"""
       statusEl.className = "status";
       detailsEl.innerHTML = "<p>正在构建引用关系。</p>";
       try {
-        const response = await fetch("/api/graph", {
+        const response = await fetch("api/graph", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
           body: JSON.stringify({

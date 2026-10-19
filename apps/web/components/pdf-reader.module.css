@@ -1,0 +1,536 @@
+.reader {
+  display: grid;
+  grid-template-rows: 58px minmax(0, 1fr);
+  height: 100vh;
+  min-width: 0;
+  background: var(--bg);
+}
+
+.readerLoading,
+.readerError {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 12px;
+  min-height: 100vh;
+  padding: 30px;
+  background: var(--bg);
+  color: var(--muted);
+  text-align: center;
+}
+
+.readerLoading strong,
+.readerError strong {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+.readerError p {
+  max-width: 620px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.loadingTrack {
+  width: min(360px, 70vw);
+  height: 3px;
+  overflow: hidden;
+  background: var(--border);
+}
+
+.loadingTrack span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.readerToolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.documentTitle {
+  display: grid;
+  min-width: 120px;
+  max-width: 360px;
+}
+
+.documentTitle strong {
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.documentTitle span {
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+}
+
+.readerStats {
+  display: flex;
+  gap: 14px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.readerStats b {
+  color: var(--text);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.toolbarButton,
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: 1px;
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.toolbarButton {
+  padding: 0 9px;
+  font-size: 10px;
+}
+
+.iconButton {
+  width: 32px;
+  flex: 0 0 auto;
+}
+
+.toolbarButton:hover,
+.iconButton:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.activeToolbarButton {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.readerBody {
+  display: grid;
+  grid-template-columns: 226px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.readerBodyBilingual {
+  grid-template-columns: 226px minmax(340px, 1fr) minmax(340px, 1fr);
+}
+
+.readerSidebar {
+  display: grid;
+  grid-template-rows: 44px minmax(0, 1fr);
+  min-height: 0;
+  border-right: 1px solid var(--border-strong);
+  background: var(--surface-muted);
+}
+
+.sidebarTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebarTabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sidebarTabs button:last-child {
+  border-right: 0;
+}
+
+.sidebarTabs button.activeTab {
+  box-shadow: inset 0 -2px 0 var(--accent);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.sidebarScroll {
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.sidebarNote {
+  margin: 8px 4px;
+  padding: 8px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.outlineItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  width: 100%;
+  min-height: 30px;
+  padding-top: 5px;
+  padding-right: 7px;
+  padding-bottom: 5px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+}
+
+.outlineItem span {
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.outlineItem small {
+  align-self: center;
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+}
+
+.outlineItem:hover,
+.outlineItemActive {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.outlineItemActive {
+  box-shadow: inset 2px 0 0 var(--rubric);
+}
+
+.referenceItem {
+  padding: 9px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+}
+
+.referenceActive {
+  background: var(--surface);
+  box-shadow: inset 2px 0 0 var(--rubric);
+}
+
+.referenceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.referenceHeader button {
+  border: 0;
+  background: transparent;
+  color: var(--rubric);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.referenceHeader span {
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.referenceItem p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 6px 0;
+  color: var(--text);
+  font-size: 9px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+}
+
+.referencePages {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.referencePages button {
+  min-height: 22px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  background: var(--surface-muted);
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+}
+
+.pdfColumn,
+.translationColumn {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: #dde3df;
+}
+
+.translationColumn {
+  border-left: 1px solid var(--border-strong);
+  background: var(--bg);
+}
+
+.paneLabel {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 35px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+
+.pdfPages,
+.translationPages {
+  display: grid;
+  justify-items: center;
+  gap: 18px;
+  padding: 18px;
+}
+
+.pdfPage {
+  position: relative;
+  max-width: none;
+  border: 1px solid #aebbb6;
+  background: #fff;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pageCanvas {
+  display: block;
+}
+
+.pageBadge {
+  position: absolute;
+  top: -1px;
+  left: -29px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+  z-index: 2;
+}
+
+.pagePlaceholder {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  min-height: 420px;
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+}
+
+.pageRenderError {
+  position: absolute;
+  inset: 12px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--danger);
+  background: #fff7f5;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.pageHighlighted {
+  border-color: var(--rubric) !important;
+  box-shadow: 0 0 0 3px rgba(168, 71, 50, 0.2);
+}
+
+.translationPage {
+  width: min(680px, 100%);
+  min-height: 720px;
+  padding: 20px 22px 26px;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.translationPage header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+}
+
+.pageText {
+  color: var(--text);
+  font-family: Georgia, "Times New Roman", "Songti SC", serif;
+  font-size: 13px;
+  line-height: 1.72;
+  white-space: pre-wrap;
+}
+
+.originalFallback {
+  color: var(--muted);
+}
+
+.inlineCitation {
+  display: inline;
+  min-width: 0;
+  height: auto;
+  margin: 0 1px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 1px solid var(--rubric);
+  border-radius: 0;
+  background: #f4e8e3;
+  color: var(--rubric);
+  font: inherit;
+  line-height: inherit;
+}
+
+.inlineCitation:hover {
+  background: var(--rubric);
+  color: #fff;
+}
+
+.translationStatus {
+  display: inline-flex;
+  margin-top: 16px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.translationError {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid #d7a59d;
+  background: #f9e9e6;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.translationError button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--danger);
+  font-size: 9px;
+}
+
+@media (max-width: 1120px) {
+  .readerStats {
+    display: none;
+  }
+
+  .readerBodyBilingual {
+    grid-template-columns: 190px minmax(300px, 1fr) minmax(300px, 1fr);
+  }
+
+  .readerBody {
+    grid-template-columns: 190px minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 860px) {
+  .reader {
+    height: auto;
+    min-height: 100vh;
+    grid-template-rows: auto auto;
+  }
+
+  .readerToolbar {
+    flex-wrap: wrap;
+  }
+
+  .documentTitle {
+    flex: 1;
+  }
+
+  .toolbarActions {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .readerBody,
+  .readerBodyBilingual {
+    grid-template-columns: 1fr;
+    grid-template-rows: 220px minmax(440px, 65vh);
+  }
+
+  .readerBodyBilingual {
+    grid-template-rows: 220px minmax(440px, 65vh) minmax(440px, 65vh);
+  }
+
+  .readerSidebar {
+    border-right: 0;
+    border-bottom: 1px solid var(--border-strong);
+  }
+
+  .translationColumn {
+    border-left: 0;
+    border-top: 1px solid var(--border-strong);
+  }
+
+  .pdfPages,
+  .translationPages {
+    padding: 12px;
+  }
+
+  .pageBadge {
+    display: none;
+  }
+}

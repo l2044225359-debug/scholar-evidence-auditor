@@ -1,0 +1,7 @@
+method,accuracy,latency_ms,dataset
+Flash,0.842,118,WMT
+Flash,0.861,121,WMT
+DeepRoute,0.903,286,WMT
+DeepRoute,0.917,294,WMT
+HybridRAG,0.889,242,PubMed
+HybridRAG,0.906,251,PubMed

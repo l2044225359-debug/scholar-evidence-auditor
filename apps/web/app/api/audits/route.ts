@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
 const createSchema = z.object({
   question: z.string().trim().min(2).max(20_000),
   fileIds: z.array(z.string()).nullable().optional(),
+  language: z.enum(["zh", "en"]).optional(),
 });
 
 export async function GET() {
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
     userId: session.user.id,
     question: parsed.data.question,
     fileIds: parsed.data.fileIds ?? null,
+    language: parsed.data.language ?? "zh",
   });
   return Response.json(
     {

@@ -63,9 +63,10 @@ class VectorIndexing(BaseIndexing):
                     markdown_content += f"\nSection: {section}"
                 if "type" in docs[i].metadata:
                     if docs[i].metadata["type"] == "image":
-                        image_origin = docs[i].metadata["image_origin"]
-                        image_origin = f'<p><img src="{image_origin}"></p>'
-                        markdown_content += f"\nImage origin: {image_origin}"
+                        image_origin = docs[i].metadata.get("image_origin")
+                        if image_origin:
+                            image_origin = f'<p><img src="{image_origin}"></p>'
+                            markdown_content += f"\nImage origin: {image_origin}"
                 if docs[i].text:
                     markdown_content += f"\ntext:\n{docs[i].text}"
 
@@ -168,7 +169,10 @@ class VectorRetrieval(BaseRetrieval):
         if self.retrieval_mode == "vector":
             emb = self.embedding(text)[0].embedding
             _, scores, ids = self.vector_store.query(
-                embedding=emb, top_k=top_k_first_round, doc_ids=scope, **kwargs
+                embedding=emb,
+                top_k=top_k_first_round,
+                ids=scope,
+                **kwargs,
             )
             docs = self.doc_store.get(ids)
             result = [
@@ -189,31 +193,44 @@ class VectorRetrieval(BaseRetrieval):
             vs_docs: list[RetrievedDocument] = []
             vs_ids: list[str] = []
             vs_scores: list[float] = []
+            vector_error: Exception | None = None
+            docstore_error: Exception | None = None
 
             def query_vectorstore():
                 nonlocal vs_docs
                 nonlocal vs_scores
                 nonlocal vs_ids
+                nonlocal vector_error
 
-                assert self.doc_store is not None
-                _, vs_scores, vs_ids = self.vector_store.query(
-                    embedding=emb, top_k=top_k_first_round, doc_ids=scope, **kwargs
-                )
-                if vs_ids:
-                    vs_docs = self.doc_store.get(vs_ids)
+                try:
+                    assert self.doc_store is not None
+                    _, vs_scores, vs_ids = self.vector_store.query(
+                        embedding=emb,
+                        top_k=top_k_first_round,
+                        ids=scope,
+                        **kwargs,
+                    )
+                    if vs_ids:
+                        vs_docs = self.doc_store.get(vs_ids)
+                except Exception as exc:
+                    vector_error = exc
 
             # full-text search section
             ds_docs: list[RetrievedDocument] = []
 
             def query_docstore():
                 nonlocal ds_docs
+                nonlocal docstore_error
 
-                assert self.doc_store is not None
-                query = text.text if isinstance(text, Document) else text
-                if scope:
-                    ds_docs = self.doc_store.query(
-                        query, top_k=top_k_first_round, doc_ids=scope
-                    )
+                try:
+                    assert self.doc_store is not None
+                    query = text.text if isinstance(text, Document) else text
+                    if scope:
+                        ds_docs = self.doc_store.query(
+                            query, top_k=top_k_first_round, doc_ids=scope
+                        )
+                except Exception as exc:
+                    docstore_error = exc
 
             vs_query_thread = threading.Thread(target=query_vectorstore)
             ds_query_thread = threading.Thread(target=query_docstore)
@@ -223,6 +240,19 @@ class VectorRetrieval(BaseRetrieval):
 
             vs_query_thread.join()
             ds_query_thread.join()
+
+            if vector_error:
+                print(
+                    "Vector retrieval failed:",
+                    type(vector_error).__name__,
+                    str(vector_error)[:200],
+                )
+            if docstore_error:
+                print(
+                    "Document retrieval failed:",
+                    type(docstore_error).__name__,
+                    str(docstore_error)[:200],
+                )
 
             result = [
                 RetrievedDocument(**doc.to_dict(), score=-1.0)

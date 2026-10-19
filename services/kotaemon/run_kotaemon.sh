@@ -2,6 +2,7 @@
 set -euo pipefail
 
 cd /home/lh/race/kotaemon
+export PYTHONUNBUFFERED=1
 
 set -a
 # shellcheck disable=SC1091

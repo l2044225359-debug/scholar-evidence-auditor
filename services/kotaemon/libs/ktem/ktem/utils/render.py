@@ -98,7 +98,14 @@ class Render:
         if not highlight_text:
             phrase = "false"
             try:
-                lang = detect(text.replace("\n", " "))["lang"]
+                detected = detect(text.replace("\n", " "))
+                if isinstance(detected, list):
+                    detected = detected[0] if detected else {}
+                lang = (
+                    detected.get("lang", "")
+                    if isinstance(detected, dict)
+                    else ""
+                )
                 if lang not in ["ja", "cn"]:
                     highlight_words = [
                         t[:-1] if t.endswith("-") else t for t in text.split("\n")
@@ -143,8 +150,9 @@ class Render:
         open_collapsible: bool = False,
     ) -> str:
         header = f"<i>{get_header(doc)}</i>"
-        if doc.metadata.get("type", "") == "image":
-            doc_content = Render.image(url=doc.metadata["image_origin"], text=doc.text)
+        image_origin = doc.metadata.get("image_origin")
+        if doc.metadata.get("type", "") == "image" and image_origin:
+            doc_content = Render.image(url=image_origin, text=doc.text)
         elif doc.metadata.get("type", "") == "table_raw":
             doc_content = Render.table_preserve_linebreaks(doc.text)
         else:
@@ -209,9 +217,10 @@ class Render:
         )
 
         text = doc.text if not override_text else override_text
-        if doc.metadata.get("type", "") == "image":
+        image_origin = doc.metadata.get("image_origin")
+        if doc.metadata.get("type", "") == "image" and image_origin:
             rendered_doc_content = Render.image(
-                url=doc.metadata["image_origin"],
+                url=image_origin,
                 text=text,
             )
         elif doc.metadata.get("type", "") == "table_raw":

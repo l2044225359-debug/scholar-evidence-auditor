@@ -286,7 +286,10 @@ class FullQAPipeline(BaseReasoning):
             message = self.rewrite_pipeline(question=message).text
             print("Rewrite result", message)
 
-        print(f"Retrievers {self.retrievers}")
+        retriever_names = ", ".join(
+            type(retriever).__name__ for retriever in self.retrievers
+        )
+        print(f"Retrievers {retriever_names}")
         # should populate the context
         docs, infos = self.retrieve(message, history)
         print(f"Got {len(docs)} retrieved documents")
@@ -314,6 +317,44 @@ class FullQAPipeline(BaseReasoning):
             conv_id=conv_id,
             **kwargs,
         )
+
+        answer_text = (answer.text or "").strip()
+        if evidence and (
+            not answer_text
+            or answer_text == "Thinking ..."
+            or answer_text.startswith("(Sorry, I don't know)")
+        ):
+            logger.warning("Empty final answer with evidence; using concise fallback")
+            try:
+                fallback = self.answering_pipeline.llm(
+                    [
+                        SystemMessage(
+                            content=(
+                                "你是严谨的科研助手。只能依据给定证据回答，"
+                                "使用与问题相同的语言。先给出直接结论，再列出关键依据。"
+                                "禁止补充证据中没有的事实；证据不足时明确说明。"
+                            )
+                        ),
+                        HumanMessage(
+                            content=(
+                                f"问题：{message}\n\n"
+                                f"证据：\n{evidence[:18000]}\n\n"
+                                "请给出简洁、可核验的回答。"
+                            )
+                        ),
+                    ]
+                ).text.strip()
+                if fallback and not fallback.startswith("(Sorry, I don't know)"):
+                    answer.text = fallback
+                    answer.content = fallback
+                    yield Document(channel="chat", content=None)
+                    yield Document(channel="chat", content=fallback)
+            except Exception as exc:
+                logger.warning(
+                    "Concise fallback failed: %s: %s",
+                    type(exc).__name__,
+                    str(exc)[:200],
+                )
 
         # check <think> tag from reasoning models
         processed_answer = replace_think_tag_with_details(answer.text)

@@ -574,7 +574,8 @@ class FileIndexPage(BasePage):
 
         if vs_ids:
             self._index._vs.delete(vs_ids)
-        self._index._docstore.delete(ds_ids)
+        if ds_ids:
+            self._index._docstore.delete(ds_ids)
 
         gr.Info(f"File {file_name} has been deleted")
 

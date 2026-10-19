@@ -54,6 +54,10 @@ class BaseChatOpenAI(ChatLLM):
             "and generated tokens is limited by the model's context length."
         ),
     )
+    extra_body: Optional[dict] = Param(
+        None,
+        help="Provider-specific request fields passed through to the API.",
+    )
     n: int = Param(
         1,
         help=(
@@ -312,6 +316,7 @@ class ChatOpenAI(BaseChatOpenAI):
             "model": self.model,
             "temperature": self.temperature,
             "max_tokens": self.max_tokens,
+            "extra_body": self.extra_body,
             "n": self.n,
             "stop": self.stop,
             "frequency_penalty": self.frequency_penalty,

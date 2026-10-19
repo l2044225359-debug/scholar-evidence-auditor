@@ -2,10 +2,36 @@
 
 ## Upload
 
-- Administrator-only PDF upload.
+- Administrator-only batch PDF upload.
 - Maximum file size: 100 MB.
 - File signature and extension are validated in Next.js and Kotaemon.
 - Original file names are retained in the shared document library.
+
+## Semantic version deduplication
+
+Before a PDF enters the index queue, Kotaemon extracts its title, first-page
+text, arXiv identity and version number. It compares those values against the
+PDFs already stored in the shared library.
+
+Detection uses, in order:
+
+1. identical SHA-256 content;
+2. the same normalized arXiv paper ID, such as `1706.03762`;
+3. high-overlap body-text shingles;
+4. title and abstract similarity.
+
+For a likely duplicate, the upload API returns HTTP `409` with the existing
+document, incoming/current versions, changed-text ratio and representative
+added/removed passages. The administrator can:
+
+- keep the indexed version;
+- replace it with the incoming file;
+- keep both files;
+- cancel the remaining files in the batch.
+
+The comparison is content-based rather than filename-based, so
+`1706.03762v1.pdf` and `1706.03762v7.pdf` are recognized as versions of the same
+paper.
 
 ## Queue
 

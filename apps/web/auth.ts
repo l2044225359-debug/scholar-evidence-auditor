@@ -4,6 +4,11 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 
 import { getUserByUsername } from "@/lib/db";
+import {
+  clearRateLimit,
+  isRateLimited,
+  recordRateLimitEvent,
+} from "@/lib/rate-limit";
 
 const credentialsSchema = z.object({
   username: z.string().trim().min(1).max(64),
@@ -31,14 +36,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const parsed = credentialsSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
+        const rateKey = `login:${parsed.data.username.toLowerCase()}`;
+        if (isRateLimited(rateKey, 5, 5 * 60 * 1000)) return null;
+
         const user = getUserByUsername(parsed.data.username);
-        if (!user || !user.active) return null;
+        if (!user || !user.active) {
+          recordRateLimitEvent(rateKey, 5 * 60 * 1000);
+          return null;
+        }
 
         const valid = await verify(
           user.password_hash,
           parsed.data.password,
         ).catch(() => false);
-        if (!valid) return null;
+        if (!valid) {
+          recordRateLimitEvent(rateKey, 5 * 60 * 1000);
+          return null;
+        }
+        clearRateLimit(rateKey);
 
         return {
           id: user.id,

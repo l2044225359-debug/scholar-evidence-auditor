@@ -3,7 +3,8 @@ $ErrorActionPreference = "Stop"
 $checks = @(
   @{ Name = "Next.js"; Url = "http://127.0.0.1:3000/login" },
   @{ Name = "Kotaemon BFF"; Url = "http://127.0.0.1:7860/api/bff/health" },
-  @{ Name = "Citation Graph"; Url = "http://127.0.0.1:8001/api/health" }
+  @{ Name = "Citation Graph"; Url = "http://127.0.0.1:8001/api/health" },
+  @{ Name = "VibeVoice TTS"; Url = "http://127.0.0.1:8002/health" }
 )
 
 $failed = $false

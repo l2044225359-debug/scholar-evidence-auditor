@@ -193,7 +193,7 @@ async function processAuditJob(job) {
     body: JSON.stringify({
       question: payload.question,
       file_ids: payload.fileIds,
-      language: "zh",
+      language: payload.language ?? "zh",
     }),
     signal: AbortSignal.timeout(5 * 60 * 1000),
   });

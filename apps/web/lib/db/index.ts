@@ -381,15 +381,17 @@ export function createAuditJob({
   userId,
   question,
   fileIds,
+  language,
 }: {
   userId: string;
   question: string;
   fileIds: string[] | null;
+  language?: "zh" | "en";
 }) {
   const db = getDb();
   const id = randomUUID();
   const timestamp = nowIso();
-  const input = { question, fileIds };
+  const input = { question, fileIds, language: language ?? "zh" };
   db.exec("BEGIN IMMEDIATE");
   try {
     db.prepare(
@@ -404,7 +406,12 @@ export function createAuditJob({
     ).run(
       id,
       userId,
-      JSON.stringify({ auditId: id, question, fileIds }),
+      JSON.stringify({
+        auditId: id,
+        question,
+        fileIds,
+        language: language ?? "zh",
+      }),
       timestamp,
     );
     db.exec("COMMIT");

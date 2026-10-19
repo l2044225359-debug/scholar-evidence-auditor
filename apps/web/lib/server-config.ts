@@ -7,6 +7,9 @@ export const serverConfig = {
   citationUrl: (
     process.env.CITATION_GRAPH_URL ?? "http://127.0.0.1:8001"
   ).replace(/\/$/, ""),
+  vibevoiceUrl: (
+    process.env.VIBEVOICE_URL ?? "http://127.0.0.1:8002"
+  ).replace(/\/$/, ""),
 };
 
 export function bffHeaders(extra?: HeadersInit): Headers {

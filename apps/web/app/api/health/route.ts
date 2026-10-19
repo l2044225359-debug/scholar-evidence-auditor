@@ -1,5 +1,7 @@
 import { auth } from "@/auth";
 import { bffHeaders, serverConfig } from "@/lib/server-config";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,23 +25,45 @@ async function fetchHealth(url: string, headers?: HeadersInit) {
   }
 }
 
+function workerHealth() {
+  const lockPath = resolve(process.cwd(), "../../work/index-worker.lock");
+  if (!existsSync(lockPath)) {
+    return { status: "unavailable", message: "worker lock missing" };
+  }
+  try {
+    const pid = Number(readFileSync(lockPath, "utf8").trim());
+    process.kill(pid, 0);
+    return { status: "ok", service: "index-worker", pid };
+  } catch {
+    return { status: "unavailable", message: "worker process not running" };
+  }
+}
+
 export async function GET() {
   const session = await auth();
   if (!session?.user) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const [kotaemon, citation] = await Promise.all([
+  const [kotaemon, citation, vibevoice] = await Promise.all([
     fetchHealth(
       `${serverConfig.bffUrl}/api/bff/health`,
       bffHeaders(),
     ),
     fetchHealth(`${serverConfig.citationUrl}/api/health`),
+    fetchHealth(`${serverConfig.vibevoiceUrl}/health`),
   ]);
 
   return Response.json({
+    next: {
+      status: "ok",
+      service: "nextjs",
+      version: "16.4.2",
+    },
     kotaemon,
     citation,
+    vibevoice,
+    worker: workerHealth(),
     generated_at: new Date().toISOString(),
   });
 }

@@ -26,4 +26,8 @@ rsync -a \
   '$citationSource' /home/lh/race/citation_graph/
 "@
 
+if ($LASTEXITCODE -ne 0) {
+  throw "WSL service synchronization failed."
+}
+
 Write-Host "WSL service sources synchronized." -ForegroundColor Green

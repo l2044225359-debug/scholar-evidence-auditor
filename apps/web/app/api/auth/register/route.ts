@@ -2,6 +2,10 @@ import { hash } from "@node-rs/argon2";
 import { z } from "zod";
 
 import { createUserFromInvite } from "@/lib/db";
+import {
+  isRateLimited,
+  recordRateLimitEvent,
+} from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -32,6 +36,13 @@ const registrationSchema = z
   });
 
 export async function POST(request: Request) {
+  const forwarded = request.headers.get("x-forwarded-for") ?? "local";
+  const clientKey = `register:${forwarded.split(",")[0].trim()}`;
+  if (isRateLimited(clientKey, 5, 10 * 60 * 1000)) {
+    return Response.json({ error: "rate_limited" }, { status: 429 });
+  }
+  recordRateLimitEvent(clientKey, 10 * 60 * 1000);
+
   const payload = await request.json().catch(() => null);
   const parsed = registrationSchema.safeParse(payload);
   if (!parsed.success) {

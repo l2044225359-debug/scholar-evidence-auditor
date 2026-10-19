@@ -82,6 +82,24 @@ class FutureWorkRequest(BaseModel):
     papers: list[FutureWorkPaper]
     foundational: list[dict] = Field(default_factory=list)
     language: Literal["zh", "en"] = "zh"
+    refresh: bool = False
+
+
+class PaperEntitySource(BaseModel):
+    id: str
+    title: str
+    year: int | None = None
+    authors: list[str] = Field(default_factory=list)
+    arxiv_id: str = ""
+    doi: str = ""
+    abstract: str = ""
+    future_work: list[str] = Field(default_factory=list)
+
+
+class PaperEntitiesRequest(BaseModel):
+    papers: list[PaperEntitySource]
+    language: Literal["zh", "en"] = "zh"
+    refresh: bool = False
 
 
 class SessionStore:
@@ -642,6 +660,11 @@ _PDF_OVERVIEW_CACHE: dict[str, tuple[int, int, dict]] = {}
 _KNOWLEDGE_OVERVIEW_CACHE: dict[str, tuple[float, dict]] = {}
 _KNOWLEDGE_OVERVIEW_LOCK = Lock()
 _KNOWLEDGE_OVERVIEW_TTL = 30
+_PAPER_ENTITY_CACHE: OrderedDict[str, tuple[float, dict]] = OrderedDict()
+_PAPER_ENTITY_LOCK = Lock()
+_PAPER_ENTITY_TTL = 6 * 60 * 60
+_FUTURE_WORK_CACHE: OrderedDict[str, tuple[float, dict]] = OrderedDict()
+_FUTURE_WORK_LOCK = Lock()
 
 
 def _normalize_pdf_text(value: str) -> str:
@@ -1045,6 +1068,424 @@ def _knowledge_overview(
             deepcopy(payload),
         )
     payload.pop("_signature", None)
+    return payload
+
+
+_ENTITY_RELATIONS = {
+    "author": "authored_by",
+    "topic": "has_topic",
+    "method": "uses_method",
+    "dataset": "evaluates_on",
+    "metric": "measured_by",
+    "claim": "supports_claim",
+}
+_ENTITY_LIMITS = {
+    "topic": 5,
+    "method": 5,
+    "dataset": 4,
+    "metric": 4,
+    "claim": 4,
+}
+_ENTITY_FALLBACKS = {
+    "topic": [
+        (r"\btransformer\b", "Transformer"),
+        (r"\bretrieval[- ]augmented generation\b|\bRAG\b", "Retrieval-Augmented Generation"),
+        (r"\bdense passage retrieval\b|\bDPR\b", "Dense Retrieval"),
+        (r"\bReAct\b|reasoning and acting", "Agentic Reasoning"),
+        (r"\bSelf-RAG\b", "Self-Reflective Retrieval"),
+    ],
+    "method": [
+        (r"\bmulti[- ]head attention\b", "Multi-Head Attention"),
+        (r"\bself[- ]attention\b", "Self-Attention"),
+        (r"\bretrieval[- ]augmented generation\b|\bRAG\b", "Retrieval-Augmented Generation"),
+        (r"\bdual[- ]encoder\b|\bdense passage retrieval\b", "Dual-Encoder Retrieval"),
+        (r"\bReAct\b", "ReAct"),
+        (r"\bSelf-RAG\b", "Self-RAG"),
+    ],
+    "dataset": [
+        (r"\bWMT\s*2014\b", "WMT 2014"),
+        (r"\bNatural Questions\b|\bNQ\b", "Natural Questions"),
+        (r"\bHotpotQA\b", "HotpotQA"),
+        (r"\bFEVER\b", "FEVER"),
+        (r"\bWebShop\b", "WebShop"),
+        (r"\bTriviaQA\b", "TriviaQA"),
+    ],
+    "metric": [
+        (r"\bBLEU\b", "BLEU"),
+        (r"\bExact Match\b|\bEM\b", "Exact Match"),
+        (r"\bF1\b", "F1"),
+        (r"\baccuracy\b", "Accuracy"),
+        (r"\brecall@\d+\b", "Recall@k"),
+    ],
+}
+
+
+def _entity_slug(value: str) -> str:
+    normalized = unicodedata.normalize("NFKC", value or "").lower()
+    slug = re.sub(r"[^a-z0-9\u3400-\u9fff]+", "-", normalized).strip("-")
+    return slug[:96]
+
+
+def _entity_evidence(text: str, pattern: str | None = None) -> str:
+    sentences = [
+        item.strip()
+        for item in re.split(r"(?<=[.!?。！？])\s+", text or "")
+        if item.strip()
+    ]
+    if pattern:
+        matcher = re.compile(pattern, flags=re.IGNORECASE)
+        for sentence in sentences:
+            if matcher.search(sentence):
+                return sentence[:520]
+    return (sentences[0] if sentences else _normalize_pdf_text(text))[:520]
+
+
+def _fallback_entities(paper: PaperEntitySource) -> dict:
+    text = " ".join(
+        [
+            paper.title,
+            paper.abstract,
+            *paper.future_work[:2],
+        ]
+    )
+    result = {"topic": [], "method": [], "dataset": [], "metric": [], "claim": []}
+    for entity_type, patterns in _ENTITY_FALLBACKS.items():
+        for pattern, label in patterns:
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                result[entity_type].append(
+                    {
+                        "label": label,
+                        "evidence": _entity_evidence(text, pattern),
+                        "confidence": 0.58,
+                    }
+                )
+    claim_sentences = [
+        item.strip()
+        for item in re.split(r"(?<=[.!?。！？])\s+", paper.abstract or "")
+        if len(item.strip()) >= 40
+    ]
+    for sentence in claim_sentences[:2]:
+        result["claim"].append(
+            {
+                "label": sentence[:320],
+                "evidence": sentence[:520],
+                "confidence": 0.55,
+            }
+        )
+    return result
+
+
+def _normalize_entity_items(
+    value,
+    fallback_evidence: str,
+    limit: int,
+) -> list[dict]:
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    items = []
+    seen = set()
+    for raw in value:
+        if isinstance(raw, str):
+            label = raw.strip()
+            evidence = fallback_evidence
+            confidence = 0.7
+        elif isinstance(raw, dict):
+            label = str(
+                raw.get("label")
+                or raw.get("name")
+                or raw.get("text")
+                or raw.get("claim")
+                or ""
+            ).strip()
+            evidence = str(
+                raw.get("evidence")
+                or raw.get("quote")
+                or fallback_evidence
+            ).strip()
+            try:
+                confidence = float(raw.get("confidence", 0.75))
+            except (TypeError, ValueError):
+                confidence = 0.75
+        else:
+            continue
+        key = re.sub(r"\s+", " ", label).casefold()
+        if not label or key in seen:
+            continue
+        seen.add(key)
+        items.append(
+            {
+                "label": label[:320],
+                "evidence": evidence[:520] or fallback_evidence[:520],
+                "confidence": round(max(0.0, min(1.0, confidence)), 3),
+            }
+        )
+        if len(items) >= limit:
+            break
+    return items
+
+
+def _paper_entity_cache_path(key: str) -> Path:
+    root = Path(
+        os.getenv("GRADIO_TEMP_DIR") or filestorage_path
+    ) / "paper_entity_cache"
+    root.mkdir(parents=True, exist_ok=True)
+    return root / f"{key}.json"
+
+
+def _future_work_cache_path(key: str) -> Path:
+    root = Path(
+        os.getenv("GRADIO_TEMP_DIR") or filestorage_path
+    ) / "future_work_cache"
+    root.mkdir(parents=True, exist_ok=True)
+    return root / f"{key}.json"
+
+
+def _extract_paper_entity_graph(
+    papers: list[PaperEntitySource],
+    language: str,
+    refresh: bool = False,
+) -> dict:
+    papers = papers[:20]
+    model = os.getenv("OPENAI_COMPLEX_MODEL", "qwen3.8-max")
+    source_records = [
+        {
+            "id": paper.id,
+            "title": paper.title,
+            "year": paper.year,
+            "authors": paper.authors[:12],
+            "abstract": paper.abstract[:1800],
+            "future_work": [item[:800] for item in paper.future_work[:2]],
+        }
+        for paper in papers
+    ]
+    cache_key = hashlib.sha256(
+        json.dumps(
+            {
+                "language": language,
+                "model": model,
+                "papers": source_records,
+            },
+            ensure_ascii=False,
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
+    now = time.time()
+    if not refresh:
+        with _PAPER_ENTITY_LOCK:
+            cached = _PAPER_ENTITY_CACHE.get(cache_key)
+            if cached and cached[0] > now:
+                _PAPER_ENTITY_CACHE.move_to_end(cache_key)
+                return deepcopy(cached[1])
+        cache_path = _paper_entity_cache_path(cache_key)
+        if (
+            cache_path.exists()
+            and now - cache_path.stat().st_mtime <= _PAPER_ENTITY_TTL
+        ):
+            try:
+                cached_payload = json.loads(
+                    cache_path.read_text(encoding="utf-8")
+                )
+                with _PAPER_ENTITY_LOCK:
+                    _PAPER_ENTITY_CACHE[cache_key] = (
+                        now + _PAPER_ENTITY_TTL,
+                        deepcopy(cached_payload),
+                    )
+                return cached_payload
+            except (OSError, json.JSONDecodeError):
+                pass
+
+    by_paper = {
+        paper.id: _fallback_entities(paper)
+        for paper in papers
+    }
+    extraction_errors = []
+    model_used = "metadata-fallback"
+    if papers:
+        prompt = (
+            "Extract a grounded paper entity graph from the supplied records. "
+            "Return strict JSON with a top-level 'papers' array. Every paper "
+            "object must contain id, topics, methods, datasets, metrics and "
+            "claims. Each item must be an object with label, evidence and "
+            "confidence. Use only facts stated in the supplied title, abstract "
+            "or future_work. Keep Topic, Method, Dataset and Metric labels as "
+            "canonical concise academic names. Claims must be atomic and "
+            "verifiable; for Chinese, produce claim labels in Simplified "
+            "Chinese while preserving the original evidence quote. Never "
+            "invent a dataset, metric or numerical result.\n\n"
+            f"Requested language: {language}\n"
+            f"Records:\n{json.dumps(source_records, ensure_ascii=False)}"
+        )
+        try:
+            extracted = _llm_json(
+                model,
+                (
+                    "You are a precise academic information extraction "
+                    "engine. Output valid JSON only and preserve evidence."
+                ),
+                prompt,
+                max_tokens=7000,
+            )
+            model_used = model
+            for item in extracted.get("papers", []) if isinstance(extracted, dict) else []:
+                paper_id = str(item.get("id") or item.get("paper_id") or "")
+                if paper_id not in by_paper:
+                    continue
+                fallback = by_paper[paper_id]
+                paper = next(
+                    (source for source in papers if source.id == paper_id),
+                    None,
+                )
+                evidence_fallback = (
+                    paper.abstract if paper and paper.abstract else paper_id
+                )
+                for output_key, entity_type in (
+                    ("topics", "topic"),
+                    ("methods", "method"),
+                    ("datasets", "dataset"),
+                    ("metrics", "metric"),
+                    ("claims", "claim"),
+                ):
+                    model_items = _normalize_entity_items(
+                        item.get(output_key),
+                        evidence_fallback,
+                        _ENTITY_LIMITS[entity_type],
+                    )
+                    merged = []
+                    seen = set()
+                    for entity in [*model_items, *fallback[entity_type]]:
+                        key = entity["label"].casefold()
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        merged.append(entity)
+                    fallback[entity_type] = merged[: _ENTITY_LIMITS[entity_type]]
+        except Exception as exc:
+            extraction_errors.append(
+                f"Model entity extraction failed: {type(exc).__name__}: {exc}"
+            )
+
+    nodes_by_id: dict[str, dict] = {}
+    edges = []
+
+    def ensure_entity(
+        entity_type: str,
+        label: str,
+        paper_id: str,
+    ) -> str:
+        if entity_type == "claim":
+            entity_id = f"claim:{paper_id}:{_entity_slug(label)}"
+        else:
+            entity_id = f"{entity_type}:{_entity_slug(label)}"
+        node = nodes_by_id.get(entity_id)
+        if node is None:
+            node = {
+                "id": entity_id,
+                "type": entity_type,
+                "label": label[:320],
+                "paper_ids": [],
+            }
+            nodes_by_id[entity_id] = node
+        if paper_id not in node["paper_ids"]:
+            node["paper_ids"].append(paper_id)
+        return entity_id
+
+    paper_summaries = []
+    for paper in papers:
+        paper_node_id = f"paper:{paper.id}"
+        nodes_by_id[paper_node_id] = {
+            "id": paper_node_id,
+            "type": "paper",
+            "label": paper.title,
+            "paper_ids": [paper.id],
+            "year": paper.year,
+            "authors": paper.authors,
+            "arxiv_id": paper.arxiv_id,
+            "doi": paper.doi,
+        }
+        for author in paper.authors[:20]:
+            label = _normalize_pdf_text(author)
+            if not label:
+                continue
+            entity_id = ensure_entity("author", label, paper.id)
+            edges.append(
+                {
+                    "source": paper_node_id,
+                    "target": entity_id,
+                    "relation": _ENTITY_RELATIONS["author"],
+                    "evidence": label,
+                    "confidence": 1.0,
+                }
+            )
+        counts = {"author": len(paper.authors[:20])}
+        for entity_type in ("topic", "method", "dataset", "metric", "claim"):
+            items = by_paper[paper.id][entity_type]
+            counts[entity_type] = len(items)
+            for item in items:
+                entity_id = ensure_entity(
+                    entity_type,
+                    item["label"],
+                    paper.id,
+                )
+                edges.append(
+                    {
+                        "source": paper_node_id,
+                        "target": entity_id,
+                        "relation": _ENTITY_RELATIONS[entity_type],
+                        "evidence": item["evidence"],
+                        "confidence": item["confidence"],
+                    }
+                )
+        paper_summaries.append(
+            {
+                "paper_id": paper.id,
+                "paper_node_id": paper_node_id,
+                "title": paper.title,
+                "counts": counts,
+            }
+        )
+
+    counts = {"paper": len(papers)}
+    for entity_type in _ENTITY_RELATIONS:
+        counts[entity_type] = sum(
+            node["type"] == entity_type for node in nodes_by_id.values()
+        )
+    payload = {
+        "model": model_used,
+        "language": language,
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "summary": {
+            "paper_count": len(papers),
+            "entity_count": len(nodes_by_id),
+            "edge_count": len(edges),
+            "counts": counts,
+        },
+        "nodes": sorted(
+            nodes_by_id.values(),
+            key=lambda node: (node["type"], node["label"].casefold()),
+        ),
+        "edges": edges,
+        "papers": paper_summaries,
+        "extraction_errors": extraction_errors,
+    }
+    with _PAPER_ENTITY_LOCK:
+        _PAPER_ENTITY_CACHE[cache_key] = (
+            now + _PAPER_ENTITY_TTL,
+            deepcopy(payload),
+        )
+        while len(_PAPER_ENTITY_CACHE) > 32:
+            _PAPER_ENTITY_CACHE.popitem(last=False)
+    try:
+        cache_path = _paper_entity_cache_path(cache_key)
+        temporary_path = cache_path.with_suffix(".tmp")
+        temporary_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        temporary_path.replace(cache_path)
+    except OSError as exc:
+        logger.warning("Unable to persist paper entity cache: %s", exc)
     return payload
 
 
@@ -1804,6 +2245,24 @@ def register_chat_bff(api, app) -> None:
             raise HTTPException(
                 status_code=503,
                 detail=f"Knowledge overview failed: {exc}",
+            ) from exc
+
+    def paper_entities(
+        payload: PaperEntitiesRequest,
+        request: Request,
+    ):
+        _check_token(request)
+        try:
+            return _extract_paper_entity_graph(
+                payload.papers,
+                payload.language,
+                payload.refresh,
+            )
+        except Exception as exc:
+            logger.exception("paper_entity_extraction_failed")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Paper entity extraction failed: {exc}",
             ) from exc
 
     def citation_corpus(request: Request):
@@ -2631,6 +3090,49 @@ def register_chat_bff(api, app) -> None:
             for item in payload.foundational[:8]
         )
         model = os.getenv("OPENAI_COMPLEX_MODEL", "qwen3.8-max")
+        cache_key = hashlib.sha256(
+            json.dumps(
+                {
+                    "language": payload.language,
+                    "model": model,
+                    "papers": [
+                        {
+                            "title": paper.title,
+                            "year": paper.year,
+                            "future_work": paper.future_work,
+                        }
+                        for paper in sources
+                    ],
+                    "foundational": payload.foundational[:8],
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ).encode("utf-8")
+        ).hexdigest()
+        now = time.time()
+        if not payload.refresh:
+            with _FUTURE_WORK_LOCK:
+                cached = _FUTURE_WORK_CACHE.get(cache_key)
+                if cached and cached[0] > now:
+                    _FUTURE_WORK_CACHE.move_to_end(cache_key)
+                    return deepcopy(cached[1])
+            cache_path = _future_work_cache_path(cache_key)
+            if (
+                cache_path.exists()
+                and now - cache_path.stat().st_mtime <= _PAPER_ENTITY_TTL
+            ):
+                try:
+                    cached_payload = json.loads(
+                        cache_path.read_text(encoding="utf-8")
+                    )
+                    with _FUTURE_WORK_LOCK:
+                        _FUTURE_WORK_CACHE[cache_key] = (
+                            now + _PAPER_ENTITY_TTL,
+                            deepcopy(cached_payload),
+                        )
+                    return cached_payload
+                except (OSError, json.JSONDecodeError):
+                    pass
         language = (
             "简体中文"
             if payload.language == "zh"
@@ -2686,12 +3188,30 @@ def register_chat_bff(api, app) -> None:
             summary = (response.choices[0].message.content or "").strip()
         except Exception:
             summary = ""
-        return {
+        result = {
             "summary_markdown": summary or fallback,
             "directions": [],
             "model": model if summary else "fallback",
             "source_count": len(sources),
         }
+        with _FUTURE_WORK_LOCK:
+            _FUTURE_WORK_CACHE[cache_key] = (
+                now + _PAPER_ENTITY_TTL,
+                deepcopy(result),
+            )
+            while len(_FUTURE_WORK_CACHE) > 16:
+                _FUTURE_WORK_CACHE.popitem(last=False)
+        try:
+            cache_path = _future_work_cache_path(cache_key)
+            temporary_path = cache_path.with_suffix(".tmp")
+            temporary_path.write_text(
+                json.dumps(result, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            temporary_path.replace(cache_path)
+        except OSError as exc:
+            logger.warning("Unable to persist Future Work cache: %s", exc)
+        return result
 
     async def csv_analyze(
         request: Request,
@@ -3422,6 +3942,11 @@ def register_chat_bff(api, app) -> None:
         "/api/bff/knowledge-overview",
         knowledge_overview,
         methods=["GET"],
+    )
+    api.add_api_route(
+        "/api/bff/paper-entities",
+        paper_entities,
+        methods=["POST"],
     )
     api.add_api_route(
         "/api/bff/citation-corpus",

@@ -243,6 +243,26 @@ if (
 ) {
   throw new Error("Local citation graph or Future Work synthesis is incomplete");
 }
+const entityCounts = localGraph.entities?.summary?.counts;
+if (
+  !localGraph.entities?.nodes?.length ||
+  !localGraph.entities?.edges?.length ||
+  entityCounts?.paper !== localGraph.nodes.length
+) {
+  throw new Error("Paper entity graph is incomplete");
+}
+for (const entityType of [
+  "author",
+  "topic",
+  "method",
+  "dataset",
+  "metric",
+  "claim",
+]) {
+  if (!Number.isFinite(entityCounts[entityType]) || entityCounts[entityType] <= 0) {
+    throw new Error(`Paper entity graph is missing ${entityType} entities`);
+  }
+}
 
 const filesResponse = await browserFetch("/api/files");
 if (filesResponse.status !== 200) {

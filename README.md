@@ -103,6 +103,10 @@ Citation Graph includes a local 20-paper corpus view with NetworkX PageRank,
 component/density metrics, foundational-paper ranking and Qwen-generated Future
 Work synthesis. See `docs/local-citation-graph.md`.
 
+The same local graph now extracts Paper, Author, Topic, Method, Dataset, Metric
+and Claim entities with grounded evidence and confidence scores. See
+`docs/paper-entities.md`.
+
 The Agent Trace panel records chat planning, retrieval, model routing and tool
 steps. It also exposes two real tools: controlled arXiv download/ingestion and
 CSV analysis with pandas, Matplotlib, Qwen-generated captions and copyable

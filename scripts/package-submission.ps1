@@ -127,7 +127,8 @@ foreach ($name in @(
   "day6_writing_framework.png",
   "day6_local_citation_graph.png",
   "knowledge-overview-desktop.png",
-  "knowledge-collections-desktop.png"
+  "knowledge-collections-desktop.png",
+  "paper-entities-desktop.png"
 )) {
   $path = Join-Path $repoRoot "outputs/$name"
   if (Test-Path $path) {

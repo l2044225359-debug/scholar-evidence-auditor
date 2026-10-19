@@ -38,6 +38,10 @@
   (2 documents) collections. Selecting RAG checks DPR, RAG, Self-RAG and Lost
   in the Middle and updates the chat context to `RAG · 4 papers`; stale conversation evidence is
   cleared on scope changes.
+- Paper entity extraction produced 128 grounded entities and 133 relations:
+  7 Paper, 43 Author, 20 Topic, 18 Method, 10 Dataset, 6 Metric and 24 Claim.
+  Entity results are persisted by content hash and recovered from disk in
+  approximately 0.17 seconds after a service restart.
 - Future Work passages were extracted from 5 papers and synthesized by
   `qwen3.8-max` into a prioritized research agenda.
 - The WSL production build and TypeScript checks pass.

@@ -13,6 +13,8 @@ export async function GET(request: Request) {
     new URL(request.url).searchParams.get("language") === "en"
       ? "en"
       : "zh";
+  const refresh =
+    new URL(request.url).searchParams.get("refresh") === "1";
 
   try {
     const corpusResponse = await fetch(
@@ -27,9 +29,8 @@ export async function GET(request: Request) {
     if (!corpusResponse.ok) {
       return Response.json(corpus, { status: corpusResponse.status });
     }
-    const graphResponse = await fetch(
-      `${serverConfig.citationUrl}/api/local-graph`,
-      {
+    const [graphResponse, entityResponse] = await Promise.all([
+      fetch(`${serverConfig.citationUrl}/api/local-graph`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -38,9 +39,21 @@ export async function GET(request: Request) {
         }),
         cache: "no-store",
         signal: AbortSignal.timeout(60_000),
-      },
-    );
+      }),
+      fetch(`${serverConfig.bffUrl}/api/bff/paper-entities`, {
+        method: "POST",
+        headers: bffHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          papers: corpus.papers ?? [],
+          language,
+          refresh,
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(300_000),
+      }),
+    ]);
     const graph = await graphResponse.json().catch(() => ({}));
+    const entities = await entityResponse.json().catch(() => ({}));
     if (!graphResponse.ok) {
       return Response.json(graph, { status: graphResponse.status });
     }
@@ -58,6 +71,7 @@ export async function GET(request: Request) {
           })),
           foundational: graph.foundational ?? [],
           language,
+          refresh,
         }),
         cache: "no-store",
         signal: AbortSignal.timeout(180_000),
@@ -78,6 +92,20 @@ export async function GET(request: Request) {
             source_count: 0,
           },
       extraction_errors: corpus.extraction_errors ?? [],
+      entities: entityResponse.ok
+        ? entities
+        : {
+            summary: {
+              paper_count: (corpus.papers ?? []).length,
+              entity_count: 0,
+              edge_count: 0,
+              counts: {},
+            },
+            nodes: [],
+            edges: [],
+            papers: [],
+            error: entities.detail ?? "entity_extraction_failed",
+          },
       truncated: Boolean(corpus.truncated),
     });
   } catch (error) {

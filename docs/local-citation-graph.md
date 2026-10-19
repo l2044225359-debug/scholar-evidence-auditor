@@ -28,6 +28,10 @@ The Citation Graph service builds a directed NetworkX graph and reports:
 The local view renders the graph as an interactive SVG. Selecting a node reveals
 its metadata and highlights related citation edges.
 
+The page also displays a heterogeneous Paper / Author / Topic / Method /
+Dataset / Metric / Claim entity graph. Selecting a paper shows its extracted
+entities in the inspector. See `docs/paper-entities.md`.
+
 ## Future Work synthesis
 
 Extracted Future Work passages are sent to `qwen3.8-max`. The synthesis:

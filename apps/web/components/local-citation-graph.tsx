@@ -2,12 +2,21 @@
 
 import {
   Crown,
+  Database,
+  FileText,
+  Gauge,
   Loader2,
   Network,
+  Quote,
   RefreshCw,
+  Tag,
   Telescope,
+  Users,
+  Wrench,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+
+import type { MessageKey } from "@/lib/i18n";
 
 import { useLanguage } from "./language-provider";
 import styles from "./local-citation-graph.module.css";
@@ -31,6 +40,56 @@ type LocalEdge = {
   source: string;
   target: string;
   relation: string;
+};
+
+type EntityType =
+  | "paper"
+  | "author"
+  | "topic"
+  | "method"
+  | "dataset"
+  | "metric"
+  | "claim";
+
+type EntityNode = {
+  id: string;
+  type: EntityType;
+  label: string;
+  paper_ids: string[];
+  year?: number;
+  authors?: string[];
+  arxiv_id?: string;
+  doi?: string;
+};
+
+type EntityEdge = {
+  source: string;
+  target: string;
+  relation: string;
+  evidence: string;
+  confidence: number;
+};
+
+type EntityPayload = {
+  model?: string;
+  language?: string;
+  generated_at?: string;
+  summary: {
+    paper_count: number;
+    entity_count: number;
+    edge_count: number;
+    counts: Partial<Record<EntityType, number>>;
+  };
+  nodes: EntityNode[];
+  edges: EntityEdge[];
+  papers: Array<{
+    paper_id: string;
+    paper_node_id: string;
+    title: string;
+    counts: Partial<Record<EntityType, number>>;
+  }>;
+  extraction_errors?: string[];
+  error?: string;
 };
 
 type LocalGraphPayload = {
@@ -63,8 +122,39 @@ type LocalGraphPayload = {
     model: string;
     source_count: number;
   };
+  entities?: EntityPayload;
   extraction_errors?: Array<{ file: string; error: string }>;
   truncated?: boolean;
+};
+
+const entityTypes: EntityType[] = [
+  "paper",
+  "author",
+  "topic",
+  "method",
+  "dataset",
+  "metric",
+  "claim",
+];
+
+const entityIcons = {
+  paper: FileText,
+  author: Users,
+  topic: Tag,
+  method: Wrench,
+  dataset: Database,
+  metric: Gauge,
+  claim: Quote,
+};
+
+const entityLabelKeys: Record<EntityType, MessageKey> = {
+  paper: "localGraph.entity.paper",
+  author: "localGraph.entity.author",
+  topic: "localGraph.entity.topic",
+  method: "localGraph.entity.method",
+  dataset: "localGraph.entity.dataset",
+  metric: "localGraph.entity.metric",
+  claim: "localGraph.entity.claim",
 };
 
 function shortTitle(title: string, length = 28) {
@@ -78,12 +168,12 @@ export function LocalCitationGraph() {
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
 
-  async function load() {
+  async function load(force = false) {
     setLoading(true);
     setError("");
     try {
       const response = await fetch(
-        `/api/citation/local?language=${locale}`,
+        `/api/citation/local?language=${locale}${force ? "&refresh=1" : ""}`,
         {
           cache: "no-store",
           credentials: "include",
@@ -131,6 +221,28 @@ export function LocalCitationGraph() {
   }, [payload]);
 
   const selected = payload?.nodes.find((node) => node.id === selectedId);
+  const selectedEntityId = selectedId ? `paper:${selectedId}` : "";
+  const selectedEntityGroups = useMemo(() => {
+    const entities = payload?.entities;
+    if (!entities || !selectedEntityId) return [];
+    const nodes = new Map(entities.nodes.map((node) => [node.id, node]));
+    const groups = new Map<EntityType, EntityNode[]>();
+    for (const edge of entities.edges) {
+      if (edge.source !== selectedEntityId) continue;
+      const node = nodes.get(edge.target);
+      if (!node) continue;
+      const current = groups.get(node.type) ?? [];
+      current.push(node);
+      groups.set(node.type, current);
+    }
+    return entityTypes
+      .filter((type) => type !== "paper")
+      .map((type) => ({
+        type,
+        nodes: groups.get(type) ?? [],
+      }))
+      .filter((group) => group.nodes.length);
+  }, [payload, selectedEntityId]);
   const relatedIds = useMemo(() => {
     if (!payload || !selectedId) return new Set<string>();
     const ids = new Set<string>([selectedId]);
@@ -159,7 +271,7 @@ export function LocalCitationGraph() {
       <div className={styles.error}>
         <strong>{t("localGraph.loadError")}</strong>
         <p>{error}</p>
-        <button className="secondary-button" type="button" onClick={() => void load()}>
+        <button className="secondary-button" type="button" onClick={() => void load(true)}>
           <RefreshCw size={13} />
           {t("localGraph.refresh")}
         </button>
@@ -202,6 +314,38 @@ export function LocalCitationGraph() {
           {t("localGraph.density")}
         </span>
       </div>
+
+      {payload.entities ? (
+        <section className={styles.entityRegister}>
+          <div className={styles.entityRegisterHeader}>
+            <span>
+              <Network size={13} />
+              {t("localGraph.entityRegister")}
+            </span>
+            <small>
+              {payload.entities.summary.entity_count} {t("localGraph.entityNodes")}
+              {" · "}
+              {payload.entities.summary.edge_count} {t("localGraph.entityRelations")}
+              {payload.entities.model ? ` · ${payload.entities.model}` : ""}
+            </small>
+          </div>
+          <div className={styles.entityCounts}>
+            {entityTypes.map((type) => {
+              const Icon = entityIcons[type];
+              return (
+                <span key={type}>
+                  <Icon size={12} />
+                  <b>{payload.entities?.summary.counts[type] ?? 0}</b>
+                  {t(entityLabelKeys[type])}
+                </span>
+              );
+            })}
+          </div>
+          {payload.entities.error ? (
+            <p className={styles.entityError}>{payload.entities.error}</p>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className={styles.workspace}>
         <section className={styles.graphPanel}>
@@ -315,6 +459,39 @@ export function LocalCitationGraph() {
               </p>
             </section>
           ) : null}
+
+          <section className={styles.panel}>
+            <div className={styles.panelTitle}>
+              <Tag size={14} />
+              {t("localGraph.selectedEntities")}
+            </div>
+            {selectedEntityGroups.length ? (
+              <div className={styles.entityGroups}>
+                {selectedEntityGroups.map((group) => {
+                  const Icon = entityIcons[group.type];
+                  return (
+                    <div className={styles.entityGroup} key={group.type}>
+                      <span className={styles.entityGroupLabel}>
+                        <Icon size={11} />
+                        {t(entityLabelKeys[group.type])}
+                      </span>
+                      <div className={styles.entityChips}>
+                        {group.nodes.map((node) => (
+                          <span key={node.id} title={node.label}>
+                            {node.label}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className={styles.entityEmpty}>
+                {t("localGraph.noSelectedEntities")}
+              </p>
+            )}
+          </section>
         </aside>
       </div>
 

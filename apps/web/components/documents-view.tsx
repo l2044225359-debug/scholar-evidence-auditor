@@ -3,11 +3,14 @@
 import {
   CheckCircle2,
   Clock3,
+  Files,
   FileText,
+  GitCompareArrows,
   Library,
   Loader2,
   RefreshCw,
   Search,
+  ShieldAlert,
   Trash2,
   Upload,
   XCircle,
@@ -39,21 +42,80 @@ type IndexJob = {
   finishedAt: string | null;
 };
 
+type DuplicateMatch = {
+  existing_id: string;
+  existing_name: string;
+  existing_version: number;
+  incoming_version: number;
+  canonical_id: string;
+  recommendation: "keep_existing" | "keep_incoming" | "review";
+  relationship: string;
+  similarity: number;
+  changed_ratio: number;
+  changes: {
+    added: string[];
+    removed: string[];
+  };
+};
+
+type DedupePreflight = {
+  file_name: string;
+  canonical_id: string;
+  version: number;
+  page_count: number;
+  duplicate: boolean;
+  recommended_action: string;
+  matches: DuplicateMatch[];
+  summary_zh: string;
+  summary_en: string;
+};
+
+type PendingDuplicate = {
+  file: File;
+  preflight: DedupePreflight;
+  remaining: File[];
+  completed: number;
+};
+
+type DedupeAction = "keep_existing" | "replace" | "coexist";
+
 function sizeLabel(size: number) {
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function versionLabel(version?: number) {
+  return version && version > 0 ? `v${version}` : "—";
+}
+
+function relationshipLabel(relationship: string, locale: "zh" | "en") {
+  const labels: Record<string, [string, string]> = {
+    exact_duplicate: ["内容完全相同", "Exact duplicate"],
+    incoming_newer: ["新文件版本更新", "Incoming version is newer"],
+    incoming_older: ["新文件版本较旧", "Incoming version is older"],
+    same_version_revision: ["同一版本内容有修订", "Same-version revision"],
+    semantic_duplicate: ["正文高度相似", "Highly similar content"],
+  };
+  const label = labels[relationship];
+  return label ? label[locale === "zh" ? 0 : 1] : relationship;
+}
+
 export function DocumentsView() {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   const { data: session } = useSession();
   const [files, setFiles] = useState<SourceFile[]>([]);
   const [jobs, setJobs] = useState<IndexJob[]>([]);
   const [query, setQuery] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [pendingJob, setPendingJob] = useState<string>();
+  const [pendingDelete, setPendingDelete] = useState<string>();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
+  const [duplicatePrompt, setDuplicatePrompt] =
+    useState<PendingDuplicate>();
   const fileInput = useRef<HTMLInputElement>(null);
   const isAdmin = session?.user?.role === "admin";
 
@@ -79,11 +141,14 @@ export function DocumentsView() {
   }, [isAdmin, t]);
 
   const refresh = useCallback(async () => {
+    setLoading(true);
     setError("");
     try {
       await Promise.all([loadFiles(), loadJobs()]);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t("documents.loadError"));
+    } finally {
+      setLoading(false);
     }
   }, [loadFiles, loadJobs, t]);
 
@@ -112,40 +177,80 @@ export function DocumentsView() {
   function selectPdf(event: ChangeEvent<HTMLInputElement>) {
     setError("");
     setNotice("");
-    const file = event.target.files?.[0] ?? null;
-    if (
-      !file ||
-      !file.name.toLowerCase().endsWith(".pdf") ||
-      file.size > 100 * 1024 * 1024
-    ) {
-      setSelectedFile(null);
-      if (file) setError(t("documents.invalidPdf"));
+    const files = Array.from(event.target.files ?? []);
+    const invalid = files.find(
+      (file) =>
+        !file.name.toLowerCase().endsWith(".pdf") ||
+        file.size <= 0 ||
+        file.size > 100 * 1024 * 1024,
+    );
+    if (invalid || files.length > 20) {
+      setSelectedFiles([]);
+      setError(t("documents.invalidPdf"));
       return;
     }
-    setSelectedFile(file);
+    setSelectedFiles(files);
   }
 
-  async function uploadPdf() {
-    if (!selectedFile || uploading) return;
+  async function enqueuePdf(file: File, action?: DedupeAction) {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("locale", locale);
+    if (action) formData.append("dedupe_action", action);
+    return fetch("/api/admin/documents/upload", {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    });
+  }
+
+  async function enqueueFiles(files: File[], completed = 0) {
+    let accepted = completed;
+    const total = completed + files.length;
+    setUploadProgress({ done: completed, total });
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+      const response = await enqueuePdf(file);
+      const payload = await response.json().catch(() => ({}));
+      if (
+        response.status === 409 &&
+        payload.error === "semantic_duplicate"
+      ) {
+        setDuplicatePrompt({
+          file,
+          preflight: payload.preflight,
+          remaining: files.slice(index + 1),
+          completed: accepted,
+        });
+        setNotice(t("documents.dedupePaused"));
+        return false;
+      }
+      if (!response.ok) {
+        throw new Error(
+          payload.detail ??
+            payload.error ??
+            t("documents.invalidPdf"),
+        );
+      }
+      accepted += 1;
+      setUploadProgress({ done: accepted, total });
+    }
+    return true;
+  }
+
+  async function uploadPdfs() {
+    if (!selectedFiles.length || uploading) return;
     setUploading(true);
     setError("");
     setNotice("");
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-      const response = await fetch("/api/admin/documents/upload", {
-        method: "POST",
-        credentials: "include",
-        body: formData,
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(payload.error ?? t("documents.invalidPdf"));
+      const completed = await enqueueFiles(selectedFiles);
+      if (completed) {
+        setSelectedFiles([]);
+        if (fileInput.current) fileInput.current.value = "";
+        setNotice(t("documents.uploadBatchSuccess"));
+        await loadJobs();
       }
-      setSelectedFile(null);
-      if (fileInput.current) fileInput.current.value = "";
-      setNotice(t("documents.uploadSuccess"));
-      await loadJobs();
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : t("documents.invalidPdf"),
@@ -155,12 +260,72 @@ export function DocumentsView() {
     }
   }
 
+  async function resolveDuplicate(action: DedupeAction | "cancel") {
+    const pending = duplicatePrompt;
+    if (!pending) return;
+    setDuplicatePrompt(undefined);
+    setError("");
+    if (action === "cancel") {
+      setNotice(t("documents.dedupeCancelled"));
+      setSelectedFiles([]);
+      if (fileInput.current) fileInput.current.value = "";
+      return;
+    }
+
+    setUploading(true);
+    try {
+      if (action !== "keep_existing") {
+        const response = await enqueuePdf(pending.file, action);
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            payload.detail ??
+              payload.error ??
+              t("documents.invalidPdf"),
+          );
+        }
+      }
+      const completed = await enqueueFiles(
+        pending.remaining,
+        pending.completed + 1,
+      );
+      if (completed) {
+        setSelectedFiles([]);
+        if (fileInput.current) fileInput.current.value = "";
+        setNotice(
+          action === "keep_existing"
+            ? t("documents.duplicateKept")
+            : t("documents.uploadBatchSuccess"),
+        );
+        await loadJobs();
+      }
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : t("documents.invalidPdf"),
+      );
+      setDuplicatePrompt(pending);
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function retryJob(id: string) {
-    await fetch(`/api/admin/jobs/${id}/retry`, {
-      method: "POST",
-      credentials: "include",
-    });
-    await loadJobs();
+    setPendingJob(id);
+    setError("");
+    try {
+      const response = await fetch(`/api/admin/jobs/${id}/retry`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setError(payload.error ?? t("common.requestFailed"));
+        return;
+      }
+      await loadJobs();
+    } finally {
+      setPendingJob(undefined);
+    }
   }
 
   async function deleteDocument(file: SourceFile) {
@@ -172,16 +337,21 @@ export function DocumentsView() {
       return;
     }
     setError("");
-    const response = await fetch(`/api/admin/documents/${file.id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-    if (!response.ok) {
-      const payload = await response.json().catch(() => ({}));
-      setError(payload.detail ?? payload.error ?? t("documents.loadError"));
-      return;
+    setPendingDelete(file.id);
+    try {
+      const response = await fetch(`/api/admin/documents/${file.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        setError(payload.detail ?? payload.error ?? t("documents.loadError"));
+        return;
+      }
+      await loadFiles();
+    } finally {
+      setPendingDelete(undefined);
     }
-    await loadFiles();
   }
 
   function jobStatus(job: IndexJob) {
@@ -190,6 +360,12 @@ export function DocumentsView() {
     if (job.status === "completed") return t("documents.completed");
     return t("documents.failed");
   }
+
+  const duplicateMatch = duplicatePrompt?.preflight.matches[0];
+  const duplicateSummary =
+    locale === "zh"
+      ? duplicatePrompt?.preflight.summary_zh
+      : duplicatePrompt?.preflight.summary_en;
 
   return (
     <div className={styles.page}>
@@ -221,6 +397,7 @@ export function DocumentsView() {
               className={styles.hiddenInput}
               type="file"
               accept="application/pdf,.pdf"
+              multiple
               onChange={selectPdf}
               aria-label={t("documents.selectPdf")}
             />
@@ -229,22 +406,153 @@ export function DocumentsView() {
               type="button"
               onClick={() => fileInput.current?.click()}
             >
-              <FileText size={14} />
-              {selectedFile?.name ?? t("documents.selectPdf")}
+              <Files size={14} />
+              {selectedFiles.length
+                ? `${selectedFiles.length} ${t("documents.filesSelected")}`
+                : t("documents.selectPdf")}
             </button>
             <button
               className="primary-button"
               type="button"
-              disabled={!selectedFile || uploading}
-              onClick={() => void uploadPdf()}
+              disabled={!selectedFiles.length || uploading}
+              onClick={() => void uploadPdfs()}
             >
               {uploading ? (
                 <Loader2 className="spin" size={14} />
               ) : (
                 <Upload size={14} />
               )}
-              {t("documents.uploadPdf")}
+              {uploading && uploadProgress.total
+                ? `${uploadProgress.done}/${uploadProgress.total}`
+                : t("documents.uploadBatch")}
             </button>
+          </section>
+        ) : null}
+
+        {isAdmin && selectedFiles.length ? (
+          <section className={styles.batchQueue}>
+            <div className={styles.batchQueueTitle}>
+              <Files size={15} />
+              <strong>{t("documents.batchQueue")}</strong>
+              <span>{selectedFiles.length}</span>
+            </div>
+            <div className={styles.batchFileList}>
+              {selectedFiles.slice(0, 6).map((file) => (
+                <span key={`${file.name}-${file.lastModified}`}>
+                  {file.name}
+                </span>
+              ))}
+              {selectedFiles.length > 6 ? (
+                <span>+{selectedFiles.length - 6}</span>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
+
+        {duplicatePrompt && duplicateMatch ? (
+          <section className={styles.duplicatePanel}>
+            <div className={styles.duplicateHeader}>
+              <ShieldAlert size={18} />
+              <div>
+                <h2>{t("documents.duplicateTitle")}</h2>
+                <p>{duplicateSummary}</p>
+              </div>
+            </div>
+            <div className={styles.duplicateGrid}>
+              <div>
+                <span>{t("documents.incomingFile")}</span>
+                <strong>{duplicatePrompt.file.name}</strong>
+                <small>
+                  {versionLabel(duplicatePrompt.preflight.version)}
+                  {duplicatePrompt.preflight.canonical_id
+                    ? ` · ${duplicatePrompt.preflight.canonical_id}`
+                    : ""}
+                </small>
+              </div>
+              <div>
+                <span>{t("documents.existingFile")}</span>
+                <strong>{duplicateMatch.existing_name}</strong>
+                <small>{versionLabel(duplicateMatch.existing_version)}</small>
+              </div>
+              <div>
+                <span>{t("documents.versionRelation")}</span>
+                <strong>
+                  {relationshipLabel(duplicateMatch.relationship, locale)}
+                </strong>
+                <small>
+                  {t("documents.textChange")}{" "}
+                  {(duplicateMatch.changed_ratio * 100).toFixed(1)}%
+                </small>
+              </div>
+            </div>
+            {duplicateMatch.changes.added.length ||
+            duplicateMatch.changes.removed.length ? (
+              <div className={styles.diffGrid}>
+                <div>
+                  <span>{t("documents.addedText")}</span>
+                  {duplicateMatch.changes.added.length ? (
+                    duplicateMatch.changes.added.map((item, index) => (
+                      <p key={`added-${index}`}>{item}</p>
+                    ))
+                  ) : (
+                    <p>—</p>
+                  )}
+                </div>
+                <div>
+                  <span>{t("documents.removedText")}</span>
+                  {duplicateMatch.changes.removed.length ? (
+                    duplicateMatch.changes.removed.map((item, index) => (
+                      <p key={`removed-${index}`}>{item}</p>
+                    ))
+                  ) : (
+                    <p>—</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+            <div className={styles.duplicateActions}>
+              <button
+                className={
+                  duplicateMatch.recommendation === "keep_existing"
+                    ? "primary-button"
+                    : "secondary-button"
+                }
+                type="button"
+                onClick={() => void resolveDuplicate("keep_existing")}
+              >
+                {t("documents.keepExisting")}
+              </button>
+              <button
+                className={
+                  duplicateMatch.recommendation === "keep_incoming"
+                    ? "primary-button"
+                    : "secondary-button"
+                }
+                type="button"
+                onClick={() => void resolveDuplicate("replace")}
+              >
+                <GitCompareArrows size={14} />
+                {t("documents.replaceExisting")}
+              </button>
+              <button
+                className={
+                  duplicateMatch.recommendation === "review"
+                    ? "primary-button"
+                    : "secondary-button"
+                }
+                type="button"
+                onClick={() => void resolveDuplicate("coexist")}
+              >
+                {t("documents.keepBoth")}
+              </button>
+              <button
+                className={styles.cancelButton}
+                type="button"
+                onClick={() => void resolveDuplicate("cancel")}
+              >
+                {t("documents.cancelRemaining")}
+              </button>
+            </div>
           </section>
         ) : null}
 
@@ -261,12 +569,14 @@ export function DocumentsView() {
                 onClick={() => void refresh()}
                 aria-label={t("system.refresh")}
               >
-                <RefreshCw size={14} />
+                <RefreshCw className={loading ? "spin" : ""} size={14} />
               </button>
             </div>
             <div className={styles.jobList}>
               {!jobs.length ? (
-                <div className={styles.jobsEmpty}>{t("documents.noJobs")}</div>
+                <div className={styles.jobsEmpty}>
+                  {loading ? t("common.loading") : t("documents.noJobs")}
+                </div>
               ) : null}
               {jobs.map((job) => {
                 const active =
@@ -314,8 +624,12 @@ export function DocumentsView() {
                       <button
                         className="secondary-button"
                         type="button"
+                        disabled={pendingJob === job.id}
                         onClick={() => void retryJob(job.id)}
                       >
+                        {pendingJob === job.id ? (
+                          <Loader2 className="spin" size={13} />
+                        ) : null}
                         {t("documents.retry")}
                       </button>
                     ) : null}
@@ -353,6 +667,15 @@ export function DocumentsView() {
               </tr>
             </thead>
             <tbody>
+              {loading && !filtered.length ? (
+                <tr>
+                  <td colSpan={isAdmin ? 6 : 5}>
+                    <div className={styles.loadingState}>
+                      {t("common.loading")}
+                    </div>
+                  </td>
+                </tr>
+              ) : null}
               {filtered.map((file) => (
                 <tr key={file.id}>
                   <td>
@@ -380,9 +703,14 @@ export function DocumentsView() {
                       <button
                         className={styles.deleteButton}
                         type="button"
+                        disabled={pendingDelete === file.id}
                         onClick={() => void deleteDocument(file)}
                       >
-                        <Trash2 size={13} />
+                        {pendingDelete === file.id ? (
+                          <Loader2 className="spin" size={13} />
+                        ) : (
+                          <Trash2 size={13} />
+                        )}
                         {t("documents.delete")}
                       </button>
                     </td>

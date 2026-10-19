@@ -1,0 +1,683 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T00:50:04+08:00",
+  "title": "Design System: Scholar",
+  "extensions": {
+    "colorMeta": {
+      "archive-ink": {
+        "role": "neutral",
+        "displayName": "Archive Ink",
+        "canonical": "#142126",
+        "tonalRamp": [
+          "oklch(15% 0.020 223.9)",
+          "oklch(27% 0.020 223.9)",
+          "oklch(39% 0.020 223.9)",
+          "oklch(51% 0.020 223.9)",
+          "oklch(63% 0.020 223.9)",
+          "oklch(75% 0.020 223.9)",
+          "oklch(87% 0.020 223.9)",
+          "oklch(95% 0.020 223.9)"
+        ]
+      },
+      "archive-ink-raised": {
+        "role": "neutral",
+        "displayName": "Archive Ink Raised",
+        "canonical": "#1b2c30",
+        "tonalRamp": [
+          "oklch(15% 0.024 214.0)",
+          "oklch(27% 0.024 214.0)",
+          "oklch(39% 0.024 214.0)",
+          "oklch(51% 0.024 214.0)",
+          "oklch(63% 0.024 214.0)",
+          "oklch(75% 0.024 214.0)",
+          "oklch(87% 0.024 214.0)",
+          "oklch(95% 0.024 214.0)"
+        ]
+      },
+      "folio-rule": {
+        "role": "neutral",
+        "displayName": "Folio Rule",
+        "canonical": "#324347",
+        "tonalRamp": [
+          "oklch(15% 0.023 213.7)",
+          "oklch(27% 0.023 213.7)",
+          "oklch(39% 0.023 213.7)",
+          "oklch(51% 0.023 213.7)",
+          "oklch(63% 0.023 213.7)",
+          "oklch(75% 0.023 213.7)",
+          "oklch(87% 0.023 213.7)",
+          "oklch(95% 0.023 213.7)"
+        ]
+      },
+      "folio-text": {
+        "role": "neutral",
+        "displayName": "Folio Text",
+        "canonical": "#a5b8b5",
+        "tonalRamp": [
+          "oklch(15% 0.021 185.3)",
+          "oklch(27% 0.021 185.3)",
+          "oklch(39% 0.021 185.3)",
+          "oklch(51% 0.021 185.3)",
+          "oklch(63% 0.021 185.3)",
+          "oklch(75% 0.021 185.3)",
+          "oklch(87% 0.021 185.3)",
+          "oklch(95% 0.021 185.3)"
+        ]
+      },
+      "folio-meta": {
+        "role": "neutral",
+        "displayName": "Folio Meta",
+        "canonical": "#8fa9a6",
+        "tonalRamp": [
+          "oklch(15% 0.029 188.0)",
+          "oklch(27% 0.029 188.0)",
+          "oklch(39% 0.029 188.0)",
+          "oklch(51% 0.029 188.0)",
+          "oklch(63% 0.029 188.0)",
+          "oklch(75% 0.029 188.0)",
+          "oklch(87% 0.029 188.0)",
+          "oklch(95% 0.029 188.0)"
+        ]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#f8f9f5",
+        "tonalRamp": [
+          "oklch(15% 0.005 117.9)",
+          "oklch(27% 0.005 117.9)",
+          "oklch(39% 0.005 117.9)",
+          "oklch(51% 0.005 117.9)",
+          "oklch(63% 0.005 117.9)",
+          "oklch(75% 0.005 117.9)",
+          "oklch(87% 0.005 117.9)",
+          "oklch(95% 0.005 117.9)"
+        ]
+      },
+      "shelf": {
+        "role": "neutral",
+        "displayName": "Shelf",
+        "canonical": "#e7ebe7",
+        "tonalRamp": [
+          "oklch(15% 0.007 145.5)",
+          "oklch(27% 0.007 145.5)",
+          "oklch(39% 0.007 145.5)",
+          "oklch(51% 0.007 145.5)",
+          "oklch(63% 0.007 145.5)",
+          "oklch(75% 0.007 145.5)",
+          "oklch(87% 0.007 145.5)",
+          "oklch(95% 0.007 145.5)"
+        ]
+      },
+      "index-paper": {
+        "role": "neutral",
+        "displayName": "Index Paper",
+        "canonical": "#eef1ed",
+        "tonalRamp": [
+          "oklch(15% 0.006 137.8)",
+          "oklch(27% 0.006 137.8)",
+          "oklch(39% 0.006 137.8)",
+          "oklch(51% 0.006 137.8)",
+          "oklch(63% 0.006 137.8)",
+          "oklch(75% 0.006 137.8)",
+          "oklch(87% 0.006 137.8)",
+          "oklch(95% 0.006 137.8)"
+        ]
+      },
+      "paper-strong": {
+        "role": "neutral",
+        "displayName": "Paper Strong",
+        "canonical": "#dfe6e2",
+        "tonalRamp": [
+          "oklch(15% 0.009 161.3)",
+          "oklch(27% 0.009 161.3)",
+          "oklch(39% 0.009 161.3)",
+          "oklch(51% 0.009 161.3)",
+          "oklch(63% 0.009 161.3)",
+          "oklch(75% 0.009 161.3)",
+          "oklch(87% 0.009 161.3)",
+          "oklch(95% 0.009 161.3)"
+        ]
+      },
+      "evidence-paper": {
+        "role": "neutral",
+        "displayName": "Evidence Paper",
+        "canonical": "#f3f3ee",
+        "tonalRamp": [
+          "oklch(15% 0.007 106.5)",
+          "oklch(27% 0.007 106.5)",
+          "oklch(39% 0.007 106.5)",
+          "oklch(51% 0.007 106.5)",
+          "oklch(63% 0.007 106.5)",
+          "oklch(75% 0.007 106.5)",
+          "oklch(87% 0.007 106.5)",
+          "oklch(95% 0.007 106.5)"
+        ]
+      },
+      "control-paper": {
+        "role": "neutral",
+        "displayName": "Control Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "oklch(15% 0.000 89.9)",
+          "oklch(27% 0.000 89.9)",
+          "oklch(39% 0.000 89.9)",
+          "oklch(51% 0.000 89.9)",
+          "oklch(63% 0.000 89.9)",
+          "oklch(75% 0.000 89.9)",
+          "oklch(87% 0.000 89.9)",
+          "oklch(95% 0.000 89.9)"
+        ]
+      },
+      "graphite": {
+        "role": "neutral",
+        "displayName": "Graphite",
+        "canonical": "#172326",
+        "tonalRamp": [
+          "oklch(15% 0.018 214.9)",
+          "oklch(27% 0.018 214.9)",
+          "oklch(39% 0.018 214.9)",
+          "oklch(51% 0.018 214.9)",
+          "oklch(63% 0.018 214.9)",
+          "oklch(75% 0.018 214.9)",
+          "oklch(87% 0.018 214.9)",
+          "oklch(95% 0.018 214.9)"
+        ]
+      },
+      "folio-muted": {
+        "role": "neutral",
+        "displayName": "Folio Muted",
+        "canonical": "#60716f",
+        "tonalRamp": [
+          "oklch(15% 0.021 187.9)",
+          "oklch(27% 0.021 187.9)",
+          "oklch(39% 0.021 187.9)",
+          "oklch(51% 0.021 187.9)",
+          "oklch(63% 0.021 187.9)",
+          "oklch(75% 0.021 187.9)",
+          "oklch(87% 0.021 187.9)",
+          "oklch(95% 0.021 187.9)"
+        ]
+      },
+      "folio-muted-strong": {
+        "role": "neutral",
+        "displayName": "Folio Muted Strong",
+        "canonical": "#455957",
+        "tonalRamp": [
+          "oklch(15% 0.025 188.8)",
+          "oklch(27% 0.025 188.8)",
+          "oklch(39% 0.025 188.8)",
+          "oklch(51% 0.025 188.8)",
+          "oklch(63% 0.025 188.8)",
+          "oklch(75% 0.025 188.8)",
+          "oklch(87% 0.025 188.8)",
+          "oklch(95% 0.025 188.8)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#c8d1cd",
+        "tonalRamp": [
+          "oklch(15% 0.011 167.7)",
+          "oklch(27% 0.011 167.7)",
+          "oklch(39% 0.011 167.7)",
+          "oklch(51% 0.011 167.7)",
+          "oklch(63% 0.011 167.7)",
+          "oklch(75% 0.011 167.7)",
+          "oklch(87% 0.011 167.7)",
+          "oklch(95% 0.011 167.7)"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Rule Strong",
+        "canonical": "#9dafaa",
+        "tonalRamp": [
+          "oklch(15% 0.021 177.2)",
+          "oklch(27% 0.021 177.2)",
+          "oklch(39% 0.021 177.2)",
+          "oklch(51% 0.021 177.2)",
+          "oklch(63% 0.021 177.2)",
+          "oklch(75% 0.021 177.2)",
+          "oklch(87% 0.021 177.2)",
+          "oklch(95% 0.021 177.2)"
+        ]
+      },
+      "petrol": {
+        "role": "secondary",
+        "displayName": "Petrol",
+        "canonical": "#315d68",
+        "tonalRamp": [
+          "oklch(15% 0.052 215.9)",
+          "oklch(27% 0.052 215.9)",
+          "oklch(39% 0.052 215.9)",
+          "oklch(51% 0.052 215.9)",
+          "oklch(63% 0.052 215.9)",
+          "oklch(75% 0.052 215.9)",
+          "oklch(87% 0.052 215.9)",
+          "oklch(95% 0.052 215.9)"
+        ]
+      },
+      "petrol-deep": {
+        "role": "secondary",
+        "displayName": "Deep Petrol",
+        "canonical": "#264a53",
+        "tonalRamp": [
+          "oklch(15% 0.044 215.9)",
+          "oklch(27% 0.044 215.9)",
+          "oklch(39% 0.044 215.9)",
+          "oklch(51% 0.044 215.9)",
+          "oklch(63% 0.044 215.9)",
+          "oklch(75% 0.044 215.9)",
+          "oklch(87% 0.044 215.9)",
+          "oklch(95% 0.044 215.9)"
+        ]
+      },
+      "petrol-ink": {
+        "role": "secondary",
+        "displayName": "Petrol Ink",
+        "canonical": "#234f49",
+        "tonalRamp": [
+          "oklch(15% 0.050 183.7)",
+          "oklch(27% 0.050 183.7)",
+          "oklch(39% 0.050 183.7)",
+          "oklch(51% 0.050 183.7)",
+          "oklch(63% 0.050 183.7)",
+          "oklch(75% 0.050 183.7)",
+          "oklch(87% 0.050 183.7)",
+          "oklch(95% 0.050 183.7)"
+        ]
+      },
+      "petrol-wash": {
+        "role": "secondary",
+        "displayName": "Petrol Wash",
+        "canonical": "#dce8e3",
+        "tonalRamp": [
+          "oklch(15% 0.014 169.2)",
+          "oklch(27% 0.014 169.2)",
+          "oklch(39% 0.014 169.2)",
+          "oklch(51% 0.014 169.2)",
+          "oklch(63% 0.014 169.2)",
+          "oklch(75% 0.014 169.2)",
+          "oklch(87% 0.014 169.2)",
+          "oklch(95% 0.014 169.2)"
+        ]
+      },
+      "oxidised-red": {
+        "role": "primary",
+        "displayName": "Oxidised Red",
+        "canonical": "#a84732",
+        "tonalRamp": [
+          "oklch(15% 0.133 33.8)",
+          "oklch(27% 0.133 33.8)",
+          "oklch(39% 0.133 33.8)",
+          "oklch(51% 0.133 33.8)",
+          "oklch(63% 0.133 33.8)",
+          "oklch(75% 0.133 33.8)",
+          "oklch(87% 0.133 33.8)",
+          "oklch(95% 0.133 33.8)"
+        ]
+      },
+      "red-wash": {
+        "role": "primary",
+        "displayName": "Red Wash",
+        "canonical": "#f1ded8",
+        "tonalRamp": [
+          "oklch(15% 0.023 38.3)",
+          "oklch(27% 0.023 38.3)",
+          "oklch(39% 0.023 38.3)",
+          "oklch(51% 0.023 38.3)",
+          "oklch(63% 0.023 38.3)",
+          "oklch(75% 0.023 38.3)",
+          "oklch(87% 0.023 38.3)",
+          "oklch(95% 0.023 38.3)"
+        ]
+      },
+      "citation-ink": {
+        "role": "primary",
+        "displayName": "Citation Ink",
+        "canonical": "#873324",
+        "tonalRamp": [
+          "oklch(15% 0.119 32.2)",
+          "oklch(27% 0.119 32.2)",
+          "oklch(39% 0.119 32.2)",
+          "oklch(51% 0.119 32.2)",
+          "oklch(63% 0.119 32.2)",
+          "oklch(75% 0.119 32.2)",
+          "oklch(87% 0.119 32.2)",
+          "oklch(95% 0.119 32.2)"
+        ]
+      },
+      "amber": {
+        "role": "tertiary",
+        "displayName": "Citation Amber",
+        "canonical": "#9b681c",
+        "tonalRamp": [
+          "oklch(15% 0.109 71.8)",
+          "oklch(27% 0.109 71.8)",
+          "oklch(39% 0.109 71.8)",
+          "oklch(51% 0.109 71.8)",
+          "oklch(63% 0.109 71.8)",
+          "oklch(75% 0.109 71.8)",
+          "oklch(87% 0.109 71.8)",
+          "oklch(95% 0.109 71.8)"
+        ]
+      },
+      "amber-wash": {
+        "role": "tertiary",
+        "displayName": "Amber Wash",
+        "canonical": "#f3e8d6",
+        "tonalRamp": [
+          "oklch(15% 0.027 80.2)",
+          "oklch(27% 0.027 80.2)",
+          "oklch(39% 0.027 80.2)",
+          "oklch(51% 0.027 80.2)",
+          "oklch(63% 0.027 80.2)",
+          "oklch(75% 0.027 80.2)",
+          "oklch(87% 0.027 80.2)",
+          "oklch(95% 0.027 80.2)"
+        ]
+      },
+      "danger": {
+        "role": "neutral",
+        "displayName": "Danger",
+        "canonical": "#aa3426",
+        "tonalRamp": [
+          "oklch(15% 0.156 30.2)",
+          "oklch(27% 0.156 30.2)",
+          "oklch(39% 0.156 30.2)",
+          "oklch(51% 0.156 30.2)",
+          "oklch(63% 0.156 30.2)",
+          "oklch(75% 0.156 30.2)",
+          "oklch(87% 0.156 30.2)",
+          "oklch(95% 0.156 30.2)"
+        ]
+      },
+      "success": {
+        "role": "neutral",
+        "displayName": "Success",
+        "canonical": "#356d5b",
+        "tonalRamp": [
+          "oklch(15% 0.067 170.2)",
+          "oklch(27% 0.067 170.2)",
+          "oklch(39% 0.067 170.2)",
+          "oklch(51% 0.067 170.2)",
+          "oklch(63% 0.067 170.2)",
+          "oklch(75% 0.067 170.2)",
+          "oklch(87% 0.067 170.2)",
+          "oklch(95% 0.067 170.2)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Workspace title only, using the editorial serif."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page headers and authentication hierarchy."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Rail titles, section titles, and editorial labels."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Operational baseline, controls, tables, and metadata."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Compact uppercase roles, table heads, and controls."
+      },
+      "mono": {
+        "displayName": "Technical Mono",
+        "purpose": "Service values, identifiers, and technical fields."
+      }
+    },
+    "shadows": [
+      {
+        "name": "composer-lift",
+        "value": "0 8px 22px rgba(20, 33, 38, 0.075)",
+        "purpose": "Separates the chat composer from the answer plane."
+      },
+      {
+        "name": "reserved-surface-shadow",
+        "value": "0 18px 46px rgba(20, 33, 38, 0.09)",
+        "purpose": "Reserved for exceptional overlays only."
+      },
+      {
+        "name": "service-halo",
+        "value": "0 0 0 3px rgba(121, 163, 146, 0.16)",
+        "purpose": "Small halo around the local-stack status dot."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-control",
+        "value": "160ms ease",
+        "purpose": "Button, suggestion, and list selection transitions."
+      },
+      {
+        "name": "state-navigation",
+        "value": "180ms ease",
+        "purpose": "Folio navigation background and text transitions."
+      },
+      {
+        "name": "progress",
+        "value": "350ms ease",
+        "purpose": "Indexing progress width changes."
+      },
+      {
+        "name": "spinner",
+        "value": "800ms linear infinite",
+        "purpose": "Discrete busy-state rotation."
+      },
+      {
+        "name": "skeleton-shimmer",
+        "value": "1300ms linear infinite",
+        "purpose": "Known-geometry skeleton loading only."
+      },
+      {
+        "name": "smooth-reveal",
+        "value": "smooth",
+        "purpose": "Message reveal and evidence-focus scrolling."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "prefers-reduced-motion: reduce",
+        "purpose": "Disable nonessential transitions, smooth scrolling, and continuous loading motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "workspace-wide",
+        "value": "1220px",
+        "behavior": "Workspace columns tighten from 258/1fr/336 to 232/1fr/300."
+      },
+      {
+        "name": "header-priority",
+        "value": "1180px",
+        "behavior": "Hide the second-last header tag before primary controls."
+      },
+      {
+        "name": "workspace-two-column",
+        "value": "1040px",
+        "behavior": "Move evidence below the collection index and conversation; use two evidence columns."
+      },
+      {
+        "name": "shell-compact",
+        "value": "1040px",
+        "behavior": "Reduce the dark folio rail from 236px to 214px."
+      },
+      {
+        "name": "citation-graph-stack",
+        "value": "900px",
+        "behavior": "Move the graph inspector below the canvas and keep the canvas at least 58vh."
+      },
+      {
+        "name": "shell-stack",
+        "value": "860px",
+        "behavior": "Turn the app shell into one column; make navigation horizontal and remove the authentication cover."
+      },
+      {
+        "name": "data-surface-compact",
+        "value": "860px",
+        "behavior": "Use compact padding, horizontal table scrolling, and a single status column."
+      },
+      {
+        "name": "workspace-mobile",
+        "value": "720px",
+        "behavior": "Stack the workspace as collection index, conversation, and evidence."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Petrol action for the primary task in a bounded control row.",
+      "html": "<button class='ds-btn-primary' type='button'><svg viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><path d='M5 12h14'/><path d='m13 6 6 6-6 6'/></svg>Run task</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:0 13px;border:1px solid var(--accent,#315d68);border-radius:2px;background:var(--accent,#315d68);color:#fff;font:700 11px/1.2 'Segoe UI','Microsoft YaHei',sans-serif;transition:background 160ms ease,border-color 160ms ease}.ds-btn-primary:hover{background:var(--accent-hover,#264a53);border-color:var(--accent-hover,#264a53)}.ds-btn-primary:focus-visible{outline:2px solid var(--rubric,#a84732);outline-offset:2px}.ds-btn-primary:disabled{cursor:not-allowed;opacity:.48}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Quiet paper action for export, refresh, open, and adjacent operations.",
+      "html": "<button class='ds-btn-secondary' type='button'><svg viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><path d='M4 12a8 8 0 0 1 13.7-5.7L20 8'/><path d='M20 3v5h-5'/><path d='M20 12a8 8 0 0 1-13.7 5.7L4 16'/><path d='M4 21v-5h5'/></svg>Refresh</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:0 13px;border:1px solid var(--border-strong,#9dafaa);border-radius:1px;background:var(--surface,#f8f9f5);color:var(--text,#172326);font:700 11px/1.2 'Segoe UI','Microsoft YaHei',sans-serif;transition:background 160ms ease,border-color 160ms ease}.ds-btn-secondary:hover{background:var(--accent-soft,#dce8e3);border-color:var(--accent,#315d68)}.ds-btn-secondary:focus-visible{outline:2px solid var(--rubric,#a84732);outline-offset:2px}.ds-btn-secondary:disabled{cursor:not-allowed;opacity:.55}"
+    },
+    {
+      "name": "Numbered Folio Navigation",
+      "kind": "nav",
+      "refersTo": "nav-folio-active",
+      "description": "Dark indexed product navigation with generated two-digit folio numbers.",
+      "html": "<nav class='ds-folio' aria-label='Primary'><a class='ds-folio-item ds-folio-active' href='#'><span class='ds-folio-number'>01</span><svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><path d='M4 19.5A2.5 2.5 0 0 1 6.5 17H20'/><path d='M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z'/></svg><span>Workspace</span></a><a class='ds-folio-item' href='#'><span class='ds-folio-number'>02</span><svg viewBox='0 0 24 24' width='17' height='17' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><path d='M4 4h6v6H4z'/><path d='M14 4h6v6h-6z'/><path d='M4 14h6v6H4z'/><path d='M14 14h6v6h-6z'/></svg><span>Documents</span></a></nav>",
+      "css": ".ds-folio{display:grid;gap:2px;width:220px;padding:16px;background:var(--surface-dark,#142126);font-family:'Segoe UI','Microsoft YaHei',sans-serif}.ds-folio-item{display:grid;grid-template-columns:24px 18px minmax(0,1fr);align-items:center;gap:8px;min-height:43px;padding:0 9px;border-top:1px solid #324347;border-radius:1px;color:#a5b8b5;font-size:12px;text-decoration:none;transition:background 180ms ease,color 180ms ease}.ds-folio-number{font:400 10px/1 Georgia,'Times New Roman',serif;color:#8fa9a6}.ds-folio-item:hover{background:#1b2c30;color:#eff3ef}.ds-folio-active{background:#e7ebe7;color:#172326}.ds-folio-active .ds-folio-number{color:#a84732;font-weight:800}.ds-folio-item:focus-visible{outline:2px solid #a84732;outline-offset:2px}"
+    },
+    {
+      "name": "Evidence Register Entry",
+      "kind": "custom",
+      "refersTo": "evidence-entry",
+      "description": "Numbered page-level source entry tied to inline citation markers.",
+      "html": "<div class='ds-evidence-rail'><article class='ds-evidence-entry' tabindex='0' aria-label='Evidence 01, attention.pdf page 1'><div class='ds-evidence-head'><span><svg viewBox='0 0 24 24' width='13' height='13' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/><path d='M14 2v6h6'/></svg>attention.pdf</span><span class='ds-page-badge'>p.1</span></div><p>We propose a new simple network architecture based solely on attention mechanisms.</p><div class='ds-evidence-meta'><span>rerank 0.71</span><a href='#'>Preview</a></div></article></div>",
+      "css": ".ds-evidence-rail{width:336px;padding:14px 14px 20px 18px;background:#f3f3ee;border-left:1px solid #c8d1cd}.ds-evidence-entry{position:relative;padding:13px 12px 11px 29px;border-top:1px solid #9dafaa;border-bottom:1px solid #9dafaa;background:transparent;color:#172326;font-family:'Segoe UI','Microsoft YaHei',sans-serif}.ds-evidence-entry::before{position:absolute;left:-17px;top:14px;display:grid;place-items:center;width:23px;height:23px;border:1px solid #c18d82;border-radius:50%;background:#f3f3ee;color:#a84732;content:'01';font:700 9px/1 Georgia,'Times New Roman',serif}.ds-evidence-rail{position:relative}.ds-evidence-rail::before{position:absolute;left:7px;top:20px;bottom:20px;width:1px;background:rgba(168,71,50,.65);content:''}.ds-evidence-head,.ds-evidence-meta{display:flex;align-items:center;justify-content:space-between;gap:8px}.ds-evidence-head>span:first-child{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700}.ds-page-badge{padding:2px 5px;border:1px solid #d4a59a;background:#f1ded8;color:#873324;font-size:10px;font-weight:800}.ds-evidence-entry p{display:-webkit-box;margin:10px 0 0;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:5;color:#455957;font:11px/1.55 Georgia,'Times New Roman','Songti SC',serif}.ds-evidence-meta{margin-top:10px;padding-top:8px;border-top:1px solid #c8d1cd;color:#60716f;font-size:10px}.ds-evidence-meta a{color:#315d68;font-weight:700;text-decoration:none}.ds-evidence-entry:focus-visible{outline:2px solid #a84732;outline-offset:-2px}"
+    },
+    {
+      "name": "Ruled Search Field",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Compact ruled search and text-entry field with inset focus underline.",
+      "html": "<label class='ds-search'><svg viewBox='0 0 24 24' width='15' height='15' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><circle cx='11' cy='11' r='8'/><path d='m21 21-4.3-4.3'/></svg><input type='search' placeholder='Search document names' aria-label='Search document names'/></label>",
+      "css": ".ds-search{display:flex;align-items:center;gap:8px;width:min(420px,100%);min-height:38px;padding:0 10px;border:1px solid #9dafaa;border-radius:1px;background:#f8f9f5;color:#60716f}.ds-search:focus-within{border-color:#315d68;box-shadow:inset 0 -2px 0 #315d68}.ds-search:focus-within svg{color:#315d68}.ds-search input{width:100%;border:0;outline:0;background:transparent;color:#172326;font:400 14px/1.45 'Segoe UI','Microsoft YaHei',sans-serif}.ds-search input::placeholder{color:#60716f}"
+    },
+    {
+      "name": "Status Tag",
+      "kind": "chip",
+      "refersTo": "tag-status",
+      "description": "Direct-labeled compact metadata or semantic state marker.",
+      "html": "<span class='ds-tag ds-tag-accent'><svg viewBox='0 0 24 24' width='13' height='13' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><path d='m5 12 4 4L19 6'/></svg>7 indexed</span><span class='ds-tag'>qwen3-rerank</span>",
+      "css": ".ds-tag{display:inline-flex;align-items:center;gap:6px;min-height:27px;padding:0 9px;border:1px solid #c8d1cd;border-radius:2px;background:#f8f9f5;color:#455957;font:700 10px/1.2 'Segoe UI','Microsoft YaHei',sans-serif;white-space:nowrap}.ds-tag-accent{border-color:#9bb9b2;background:#dce8e3;color:#234f49}.ds-tag:focus-visible{outline:2px solid #a84732;outline-offset:2px}"
+    },
+    {
+      "name": "Ruled Register Table",
+      "kind": "custom",
+      "refersTo": "table-register-header",
+      "description": "Accession-style data table with ruled rows and no card stacking.",
+      "html": "<div class='ds-table-shell'><table class='ds-register'><thead><tr><th>Document</th><th>Size</th><th>Status</th></tr></thead><tbody><tr><td>attention.pdf</td><td>2.1 MB</td><td><span class='ds-state'>Indexed</span></td></tr><tr><td>rag_2005.pdf</td><td>864.6 KB</td><td><span class='ds-state'>Indexed</span></td></tr></tbody></table></div>",
+      "css": ".ds-table-shell{overflow-x:auto;border:1px solid #9dafaa;border-radius:1px;background:#f8f9f5}.ds-register{width:100%;min-width:620px;border-collapse:collapse;font-family:'Segoe UI','Microsoft YaHei',sans-serif}.ds-register th,.ds-register td{padding:12px 14px;border-bottom:1px solid #c8d1cd;text-align:left;vertical-align:middle}.ds-register th{background:#eef1ed;color:#60716f;font-size:10px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}.ds-register td{color:#172326;font-size:12px}.ds-register tr:last-child td{border-bottom:0}.ds-register tbody tr:hover{background:#f3f3ee}.ds-register:focus-visible{outline:2px solid #a84732;outline-offset:-2px}.ds-state{display:inline-flex;align-items:center;min-height:24px;padding:0 7px;border:1px solid #9bb9b2;background:#dce8e3;color:#234f49;font-size:10px;font-weight:700}"
+    },
+    {
+      "name": "Segmented Model Switch",
+      "kind": "custom",
+      "refersTo": "model-mode-active",
+      "description": "Joined routing control for automatic, fast, and deep model modes.",
+      "html": "<div class='ds-segments' role='group' aria-label='Model route'><button class='ds-segment ds-segment-active' type='button' aria-pressed='true'><svg viewBox='0 0 24 24' width='12' height='12' fill='none' stroke='currentColor' stroke-width='2' aria-hidden='true'><path d='m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z'/></svg>Auto</button><button class='ds-segment' type='button' aria-pressed='false'>Fast</button><button class='ds-segment' type='button' aria-pressed='false'>Deep</button></div>",
+      "css": ".ds-segments{display:inline-flex;align-items:center;border:1px solid #9dafaa;border-radius:2px;background:#eef1ed}.ds-segment{display:inline-flex;align-items:center;gap:4px;min-height:27px;padding:0 8px;border:0;border-radius:0;background:transparent;color:#60716f;font:700 9px/1.2 'Segoe UI','Microsoft YaHei',sans-serif}.ds-segment+.ds-segment{border-left:1px solid #c8d1cd}.ds-segment:hover{color:#172326}.ds-segment:focus-visible{position:relative;outline:2px solid #a84732;outline-offset:2px;z-index:1}.ds-segment-active{background:#315d68;color:#fff}.ds-segment-active:hover{color:#fff}"
+    },
+    {
+      "name": "Folio Page Header",
+      "kind": "custom",
+      "description": "Editorial page header with direct subtitle and a short oxidised-red folio rule.",
+      "html": "<header class='ds-page-header'><div><h1>Evidence workspace<span class='ds-folio-mark' aria-hidden='true'></span></h1><p>All indexed papers</p></div><span class='ds-tag ds-tag-accent'>Text snapshot</span></header>",
+      "css": ".ds-page-header{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:82px;padding:14px 24px;border-bottom:1px solid #c8d1cd;background:#f8f9f5;font-family:'Segoe UI','Microsoft YaHei',sans-serif}.ds-page-header h1{margin:0;color:#172326;font:700 27px/1 Georgia,'Times New Roman','Songti SC',serif;letter-spacing:-.025em}.ds-page-header p{margin:6px 0 0;color:#60716f;font-size:10px}.ds-folio-mark{display:inline-block;width:30px;height:1px;margin:0 0 6px 12px;background:#a84732}.ds-tag{display:inline-flex;align-items:center;min-height:27px;padding:0 9px;border:1px solid #9bb9b2;border-radius:2px;background:#dce8e3;color:#234f49;font-size:10px;font-weight:700;white-space:nowrap}@media(max-width:720px){.ds-page-header{min-height:72px;align-items:flex-start;flex-direction:column;gap:10px;padding:12px 14px}.ds-page-header h1{font-size:23px}.ds-page-header p{display:none}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Finding Aid",
+    "overview": "Scholar is an Operate surface organized as a working special-collections finding aid. The visual world is built from archival order rather than paper decoration: cool paper planes, a dark folio index, hairline rules, accession tables, numbered entries, and one oxidised-red evidence key. The interface should make the evidence trail feel inspectable before it makes the archive metaphor visible.\n\nThe system alternates between two registers. The dark navigation register frames the product and makes every workspace folio visible at once. The paper register carries the task itself with dense, quiet metadata, serif emphasis, and ruled lists. A pale green shelf tone separates the app ground from white control surfaces, while petrol handles actions and selection. Oxidised red is reserved for provenance, focus, and the active folio numeral.\n\nThe archive reference stops at structure. There are no textures, torn edges, faux page shadows, ornamental stamps, or period furniture. The world contributes type, palette, density, and one signature move: numbered evidence linked between answer, register, and keyboard focus.",
+    "keyCharacteristics": [
+      "Dark archival navigation beside a cool paper work surface.",
+      "One-pixel rules, square corners, and ruled register rows instead of card stacks.",
+      "Numbered folio navigation and numbered evidence entries.",
+      "Georgia for editorial emphasis; Segoe UI for controls and operational metadata.",
+      "Petrol for actions and selection; oxidised red only for the evidence trail and focus.",
+      "Flat surfaces, restrained loading motion, and no hover-only actions."
+    ],
+    "rules": [
+      {
+        "name": "The Evidence Red Rule",
+        "body": "Oxidised Red belongs to provenance and focus. Do not use it for ordinary primary actions, broad backgrounds, or decorative emphasis.",
+        "section": "Colors"
+      },
+      {
+        "name": "The Two-Register Rule",
+        "body": "Dark navigation and paper work surfaces are distinct registers. Do not turn operational panels into dark inset cards; keep the paper register continuous.",
+        "section": "Colors"
+      },
+      {
+        "name": "The Control White Rule",
+        "body": "Control Paper is for text fields and white control interiors. It is not the default page background.",
+        "section": "Colors"
+      },
+      {
+        "name": "The Two-Measure Rule",
+        "body": "Georgia carries reading and editorial hierarchy; Segoe UI carries operation and metadata. Do not set navigation, form labels, buttons, or dense table controls in serif type.",
+        "section": "Typography"
+      },
+      {
+        "name": "The Metadata Floor Rule",
+        "body": "Operational text never drops below 9px. When space is insufficient, remove low-priority metadata or allow horizontal scrolling rather than compressing labels below the floor.",
+        "section": "Typography"
+      },
+      {
+        "name": "The Ordered-Stack Rule",
+        "body": "Mobile composition keeps task order: choose context, perform the central task, inspect evidence or results. Do not preserve a three-column layout below 1040px by shrinking controls or type.",
+        "section": "Layout"
+      },
+      {
+        "name": "The Rule-Before-Shadow Rule",
+        "body": "First separate with a rule or tonal change. If a shadow is still necessary, use the Composer Lift only; do not give every panel its own elevation.",
+        "section": "Elevation & Depth"
+      },
+      {
+        "name": "The Ruled-Corner Rule",
+        "body": "Prefer a 0-1px corner and a one-pixel rule over a rounded container. Do not use pill-shaped controls or soft card radii to signal affordance.",
+        "section": "Shapes"
+      }
+    ],
+    "dos": [
+      "Do use one-pixel rules, tonal planes, and column boundaries to establish hierarchy.",
+      "Do keep citation markers and evidence entries paired by stable numbers.",
+      "Do reserve Oxidised Red for evidence, active folio numerals, selection marks, and focus.",
+      "Do use Petrol for primary action, healthy state, and selected controls.",
+      "Do keep navigation and controls in compact sans type while letting Georgia carry editorial content and metric numerals.",
+      "Do preserve the collection, conversation, evidence order when columns stack.",
+      "Do provide explicit labels, icons, and text alongside status colors.",
+      "Do use direct labels and standard web controls before archival ornament."
+    ],
+    "donts": [
+      "Don't add paper textures, torn edges, faux stamps, decorative shadows, or ornamental archive clutter.",
+      "Don't turn ruled registers into floating cards or wrap every section in a rounded container.",
+      "Don't use pills, large radii, gradients, or blur effects as generic UI polish.",
+      "Don't use Oxidised Red as the main call-to-action color.",
+      "Don't use color alone for selection, evidence confidence, service health, errors, or disabled state.",
+      "Don't put critical actions behind hover or hide them on mobile.",
+      "Don't add motion beyond state feedback and loading without a reduced-motion path.",
+      "Don't compress three-column composition below 1040px or reduce operational text below the 9px metadata floor."
+    ]
+  }
+}

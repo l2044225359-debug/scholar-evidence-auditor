@@ -3,6 +3,7 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  Loader2,
   RefreshCw,
   Server,
 } from "lucide-react";
@@ -14,8 +15,11 @@ import { useLanguage } from "./language-provider";
 import styles from "./data-views.module.css";
 
 type HealthPayload = {
+  next?: Record<string, unknown>;
   kotaemon?: Record<string, unknown>;
   citation?: Record<string, unknown>;
+  vibevoice?: Record<string, unknown>;
+  worker?: Record<string, unknown>;
   generated_at?: string;
 };
 
@@ -27,13 +31,15 @@ function StatusPanel({
   title,
   payload,
   endpoint,
+  loading,
 }: {
   title: string;
   payload?: Record<string, unknown>;
   endpoint: string;
+  loading: boolean;
 }) {
   const { t } = useLanguage();
-  const healthy = statusOf(payload) === "ok";
+  const healthy = !loading && statusOf(payload) === "ok";
   const models =
     payload?.models && typeof payload.models === "object"
       ? (payload.models as Record<string, unknown>)
@@ -50,13 +56,23 @@ function StatusPanel({
             healthy ? styles.statusHealthy : styles.statusUnavailable
           }
         >
-          {healthy ? <CheckCircle2 size={18} /> : <AlertTriangle size={18} />}
+          {loading ? (
+            <Loader2 className="spin" size={18} />
+          ) : healthy ? (
+            <CheckCircle2 size={18} />
+          ) : (
+            <AlertTriangle size={18} />
+          )}
         </span>
       </div>
       <div className={styles.statusDetails}>
         <div className={styles.statusRow}>
           <span>{t("system.status")}</span>
-          <code>{statusOf(payload)}</code>
+          <code>
+            {loading
+              ? t("common.loading")
+              : statusOf(payload)}
+          </code>
         </div>
         <div className={styles.statusRow}>
           <span>{t("system.endpoint")}</span>
@@ -135,16 +151,41 @@ export function SystemView() {
         {error ? <div className="error-banner">{error}</div> : null}
         <div className={styles.statusGrid}>
           <StatusPanel
+            title="Next.js"
+            payload={health.next}
+            endpoint="localhost:3000"
+            loading={loading}
+          />
+          <StatusPanel
             title="Kotaemon chat BFF"
             payload={health.kotaemon}
             endpoint="localhost:7860"
+            loading={loading}
           />
           <StatusPanel
             title="Citation graph"
             payload={health.citation}
             endpoint="localhost:8001"
+            loading={loading}
+          />
+          <StatusPanel
+            title="Index worker"
+            payload={health.worker}
+            endpoint="local worker"
+            loading={loading}
+          />
+          <StatusPanel
+            title="VibeVoice TTS"
+            payload={health.vibevoice}
+            endpoint="localhost:8002"
+            loading={loading}
           />
         </div>
+        {health.generated_at ? (
+          <p className={styles.generatedAt}>
+            {health.generated_at}
+          </p>
+        ) : null}
       </main>
     </div>
   );

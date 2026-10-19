@@ -57,7 +57,7 @@ type AuditItem = {
 };
 
 export function AuditView() {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   const [files, setFiles] = useState<SourceFile[]>([]);
   const [audits, setAudits] = useState<AuditItem[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -131,6 +131,7 @@ export function AuditView() {
         body: JSON.stringify({
           question: question.trim(),
           fileIds: selectedFiles.size ? [...selectedFiles] : null,
+          language: locale,
         }),
       });
       const payload = await response.json();
@@ -249,7 +250,9 @@ export function AuditView() {
           </aside>
 
           <section className={styles.report}>
-            {loading ? <div className={styles.empty}>Loading...</div> : null}
+            {loading ? (
+              <div className={styles.empty}>{t("common.loading")}</div>
+            ) : null}
             {!loading && !current ? (
               <div className={styles.empty}>{t("audit.noReports")}</div>
             ) : null}

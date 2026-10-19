@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; width: 1440px; height: 900px; overflow: hidden; background: #e8ece8; color: #142126; font: 14px/1.45 "Segoe UI", sans-serif; }
+    .shell { display: grid; grid-template-columns: 232px minmax(0,1fr) 332px; grid-template-rows: 72px 1fr; height: 900px; }
+    .nav { grid-row: 1 / 3; background: #142126; color: #dfe8e5; padding: 20px 16px; position: relative; }
+    .brand { font: 700 19px Georgia, serif; letter-spacing: .02em; }
+    .brand small { display:block; margin-top:4px; color:#86aaa8; font:600 10px "Segoe UI"; letter-spacing:.12em; text-transform:uppercase; }
+    .folio { margin-top: 34px; display: grid; gap: 5px; }
+    .folio div { min-height: 44px; display: grid; grid-template-columns: 30px 1fr; align-items: center; border-top: 1px solid #385054; color: #a9bfbc; }
+    .folio .active { background: #315d68; color: white; border-color: #7fa4a2; padding: 0 8px; margin-left: -8px; }
+    .folio b { color: #a84732; font: 700 13px Georgia, serif; }
+    .folio .active b { color: #e7b2a6; }
+    .navfoot { position:absolute; bottom:18px; left:16px; right:16px; font-size:11px; color:#8ba5a2; border-top:1px solid #385054; padding-top:12px; }
+    .header { background:#f5f7f3; border-bottom:1px solid #b9c6c2; padding:13px 24px; display:flex; justify-content:space-between; align-items:center; }
+    .header h1 { margin:0; font:700 24px Georgia,serif; }
+    .header p { margin:3px 0 0; color:#5f7474; font-size:11px; }
+    .meta { display:flex; gap:7px; align-items:center; }
+    .pill { border:1px solid #aebfba; padding:7px 10px; background:#edf1ed; font-size:11px; }
+    .pill.red { border-color:#c88b7f; color:#8b3424; background:#f6e5e0; }
+    .main { background:#eef1ed; padding:20px 24px; display:grid; grid-template-columns: 255px 1fr; gap:22px; min-width:0; }
+    .index { border-right:1px solid #c7d1cd; padding-right:18px; }
+    .kicker { color:#6c7f7c; font-size:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; }
+    .count { font:700 38px Georgia,serif; margin:4px 0 12px; }
+    .paper { padding:9px 0; border-top:1px solid #c7d1cd; display:grid; grid-template-columns:18px 1fr; gap:7px; }
+    .paper:first-of-type { border-top:2px solid #315d68; }
+    .paper i { width:10px; height:10px; margin-top:4px; border:1px solid #315d68; background:#dce8e3; }
+    .paper strong { display:block; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .paper span { color:#718482; font-size:9px; }
+    .conversation { min-width:0; display:grid; grid-template-rows:auto 1fr auto; }
+    .context { display:flex; justify-content:space-between; border-bottom:1px solid #c7d1cd; padding-bottom:11px; }
+    .context b { font:700 17px Georgia,serif; }
+    .messages { padding:18px 8px 0 0; }
+    .question { margin-left:100px; background:#315d68; color:white; padding:12px 14px; font-size:13px; max-width:600px; }
+    .answer { margin-top:16px; border-left:2px solid #a84732; padding-left:14px; max-width:680px; }
+    .answer h3 { margin:0 0 8px; font:700 18px Georgia,serif; }
+    .answer p { margin:0 0 10px; font-size:13px; line-height:1.72; }
+    .cite { display:inline-grid; place-items:center; min-width:23px; height:20px; background:#f0d9d2; color:#8b3424; font-size:10px; font-weight:800; vertical-align:middle; }
+    .compose { margin-top:14px; height:54px; border:1px solid #9caeaa; background:#fff; display:flex; align-items:center; padding:0 14px; color:#748481; }
+    .rail { background:#f5f7f3; border-left:1px solid #b9c6c2; padding:18px; position:relative; }
+    .rail:before { content:""; position:absolute; left:7px; top:70px; bottom:24px; width:1px; background:#a84732; }
+    .railhead { display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #b9c6c2; padding:0 0 12px 13px; }
+    .railhead strong { font:700 17px Georgia,serif; }
+    .evidence { margin:13px 0 0 13px; background:#fff; border:1px solid #c5cfcb; border-top:3px solid #315d68; padding:12px; }
+    .evidence .top { display:flex; justify-content:space-between; font-size:10px; color:#607471; }
+    .page { color:#8b3424; background:#f2dfd9; padding:3px 6px; font-weight:700; }
+    .snippet { margin-top:9px; font:13px/1.55 Georgia,serif; color:#2c3b3b; }
+    .score { margin-top:10px; padding-top:8px; border-top:1px solid #d4dcda; display:flex; justify-content:space-between; font-size:10px; color:#6d807d; }
+    .key { position:absolute; left:2px; top:78px; width:11px; height:11px; border:1px solid #a84732; background:#f5f7f3; border-radius:50%; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="nav">
+      <div class="brand">Scholar<small>Evidence archive workspace</small></div>
+      <div class="folio">
+        <div class="active"><b>01</b><span>研究工作台</span></div>
+        <div><b>02</b><span>文档库</span></div>
+        <div><b>03</b><span>引用图谱</span></div>
+        <div><b>04</b><span>证据审计</span></div>
+        <div><b>05</b><span>管理中心</span></div>
+        <div><b>06</b><span>系统状态</span></div>
+      </div>
+      <div class="navfoot">admin · 管理员<br><br>本地科研服务 · 在线</div>
+    </aside>
+    <header class="header">
+      <div><h1>证据工作台</h1><p>Attention Is All You Need · 已选择 1 篇论文</p></div>
+      <div class="meta"><span class="pill">混合检索</span><span class="pill">qwen3.8-flash</span><span class="pill red">30/30 评测</span><span class="pill">7 篇论文</span></div>
+    </header>
+    <main class="main">
+      <section class="index">
+        <div class="kicker">Collection index</div>
+        <div class="count">07</div>
+        <div class="paper"><i></i><div><strong>attention.pdf</strong><span>2.1 MB · Docling</span></div></div>
+        <div class="paper"><i></i><div><strong>attention_scan_batch20.pdf</strong><span>5.5 MB · OCR</span></div></div>
+        <div class="paper"><i></i><div><strong>rag_2005.11401.pdf</strong><span>RAG · 885 KB</span></div></div>
+        <div class="paper"><i></i><div><strong>dpr_2004.04906.pdf</strong><span>DPR · 375 KB</span></div></div>
+        <div class="paper"><i></i><div><strong>self_rag_2310.11511.pdf</strong><span>Self-RAG · 1.3 MB</span></div></div>
+        <div class="paper"><i></i><div><strong>lost_in_middle_2307.03172.pdf</strong><span>Long context · 730 KB</span></div></div>
+      </section>
+      <section class="conversation">
+        <div class="context"><b>上下文：attention.pdf</b><span class="kicker">Docling + qwen3.5-ocr · qwen3-rerank</span></div>
+        <div class="messages">
+          <div class="question">Transformer 论文提出了什么模型？它的核心机制是什么？</div>
+          <div class="answer">
+            <h3>证据结论</h3>
+            <p>论文提出了 <strong>Transformer</strong>，一种完全基于注意力机制的网络架构 <span class="cite">1</span><span class="cite">2</span>。它摒弃循环与卷积，通过自注意力建立全局依赖，并允许多头注意力在多个表示子空间并行建模 <span class="cite">3</span>。</p>
+            <p>模型由 6 层编码器与解码器堆栈组成，使用缩放点积注意力和位置编码；训练并行化和效率因此显著提升 <span class="cite">4</span>。</p>
+          </div>
+          <div class="compose">向选中的论文提问</div>
+        </div>
+      </section>
+    </main>
+    <aside class="rail">
+      <div class="railhead"><strong>证据登记册</strong><span class="pill red">05</span></div>
+      <span class="key"></span>
+      <article class="evidence">
+        <div class="top"><strong>attention.pdf</strong><span class="page">P.1</span></div>
+        <div class="snippet">We propose a new simple network architecture, the Transformer, based solely on attention mechanisms, dispensing with recurrence and convolutions entirely.</div>
+        <div class="score"><span>重排 0.71</span><span>预览 ↗</span></div>
+      </article>
+      <article class="evidence">
+        <div class="top"><strong>attention.pdf</strong><span class="page">P.2</span></div>
+        <div class="snippet">Recurrent models typically factor computation along the symbol positions of the input and output sequences, precluding parallelization within training examples.</div>
+        <div class="score"><span>重排 0.63</span><span>预览 ↗</span></div>
+      </article>
+    </aside>
+  </div>
+</body>
+</html>

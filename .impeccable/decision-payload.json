@@ -1,0 +1,168 @@
+{
+  "title": "Choose Scholar's visual world",
+  "question": "Select the direction that should carry the full research workspace across every page.",
+  "options": [
+    {
+      "id": "assigned",
+      "kind": "assigned",
+      "label": "The Finding Aid",
+      "kicker": "THE ROLL",
+      "lineage": "Special-collections finding aids, archival index cards, ruled dockets",
+      "thesis": "A living finding aid for research evidence, not a generic admin dashboard.",
+      "palette": ["#142126", "#315d68", "#a84732", "#e8ece8"],
+      "materials": ["finding-aid tabs", "one-pixel rules", "index dockets"],
+      "viewport": "A three-column research desk: folio index, cited conversation, evidence register.",
+      "risk": "Archive references become clutter if task hierarchy is not strict.",
+      "raised": [
+        {
+          "from": "operate-c-emission-line-rail",
+          "raise": "Critical, pending, and stale states also change line weight and dash."
+        },
+        {
+          "from": "rw-centre-rail-reference-setting",
+          "raise": "A live key rail connects navigation, citation markers, and evidence entries."
+        },
+        {
+          "from": "emigre-bitmap-specimen",
+          "raise": "Catalog numerals and specimen rhythm give dense metadata an editorial scale."
+        }
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html",
+      "comp": ".impeccable/mocks/decision/assigned.webp"
+    },
+    {
+      "id": "model-pick",
+      "kind": "pick",
+      "label": "The Review Dossier",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "Peer-review dossiers, redlined manuscripts, editorial registration marks",
+      "thesis": "The workspace as a live peer-review dossier with claims and evidence in the margin.",
+      "palette": ["#1f2529", "#f3f4f1", "#a33a2b", "#c49a4a"],
+      "materials": ["editorial markup", "margin rules", "registration marks"],
+      "viewport": "A manuscript-centered workspace with evidence hanging in a red-ruled margin.",
+      "risk": "Literal paper cues can make the product feel slower than the task.",
+      "html": ".impeccable/mocks/decision/model-pick.html",
+      "comp": ".impeccable/mocks/decision/model-pick.webp"
+    },
+    {
+      "id": "challenger-ruled-reference",
+      "kind": "challenger",
+      "catalogId": "rw-centre-rail-reference-setting",
+      "label": "The Ruled Reference",
+      "verdict": "competitive",
+      "lineage": "Scholarly reference setting and ruled annotation margins",
+      "thesis": "A precise reference edition where a center rail anchors navigation and citations.",
+      "palette": ["#202326", "#efefea", "#a43b2d", "#7c898d"],
+      "materials": ["one-pixel rules", "detent keys", "two-measure type"],
+      "viewport": "A wide-margin reading desk with a narrow live key rail between work areas.",
+      "case": "Very strong academic identification; risks making every control feel annotation-like.",
+      "risk": "A universal key rail can slow scanning when users need quick task switching.",
+      "html": ".impeccable/mocks/decision/challenger-ruled-reference.html",
+      "comp": ".impeccable/mocks/decision/challenger-ruled-reference.webp",
+      "hero": "https://impeccable.style/worlds/cards/rw-centre-rail-reference-setting-hero.webp"
+    },
+    {
+      "id": "challenger-emission-rail",
+      "kind": "challenger",
+      "catalogId": "operate-c-emission-line-rail",
+      "label": "The Emission Rail",
+      "verdict": "competitive",
+      "lineage": "Spectroscopic plates and scientific wavelength notation",
+      "thesis": "Service, retrieval, and evidence states register on one calibrated rail.",
+      "palette": ["#1b1f21", "#d9d7cb", "#d2b53f", "#4c7986"],
+      "materials": ["hairline traces", "graphite plates", "wavelength marks"],
+      "viewport": "A dark research bench where one rail connects model, retrieval, and evidence state.",
+      "case": "Strong technical signal; risks reading as an instrument rather than a workspace.",
+      "risk": "Spectral colors and slim traces can hurt state recognition at a glance.",
+      "html": ".impeccable/mocks/decision/challenger-emission-rail.html",
+      "comp": ".impeccable/mocks/decision/challenger-emission-rail.webp",
+      "hero": "https://impeccable.style/worlds/cards/operate-c-emission-line-rail-hero.webp"
+    },
+    {
+      "id": "challenger-bitmap-specimen",
+      "kind": "challenger",
+      "catalogId": "emigre-bitmap-specimen",
+      "label": "The Specimen Sheet",
+      "verdict": "competitive",
+      "lineage": "Emigre bitmap type specimens and editorial specimen books",
+      "thesis": "The workspace as a bold scholarly specimen sheet with machine-readable labels.",
+      "palette": ["#f5f5f0", "#151515", "#295cba", "#d7d7cd"],
+      "materials": ["bitmap display type", "specimen grids", "fine grotesk text"],
+      "viewport": "A high-contrast specimen grid led by oversized catalog numerals.",
+      "case": "Memorable identity; lower immediate clarity for a dense operational tool.",
+      "risk": "Display typography can overpower the evidence users came to inspect.",
+      "html": ".impeccable/mocks/decision/challenger-bitmap-specimen.html",
+      "comp": ".impeccable/mocks/decision/challenger-bitmap-specimen.webp",
+      "hero": "https://impeccable.style/worlds/cards/emigre-bitmap-specimen-hero.webp"
+    },
+    {
+      "id": "declined-character-catalog",
+      "kind": "challenger",
+      "catalogId": "pop-culture-shelf-character-goods-catalog",
+      "label": "The Character Roster",
+      "verdict": "declined",
+      "lineage": "Ranked character-goods catalogs",
+      "thesis": "Documents and evidence arranged as a playful ranked roster.",
+      "palette": ["#f4ede4", "#ff705d", "#8ed462", "#2c2e2a"],
+      "materials": ["whole-cell roster", "ribbon color", "soft ground"],
+      "viewport": "A bright roster of papers with oversized personality plates.",
+      "case": "High charm, low academic credibility.",
+      "risk": "Would make serious evidence look like merchandise.",
+      "kept": "Whole-cell selection states remain useful for the document index.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-character-goods-catalog-hero.webp"
+    },
+    {
+      "id": "declined-zoo-map",
+      "kind": "challenger",
+      "catalogId": "aww2-zoo-gardens-guide-map",
+      "label": "The Research Map",
+      "verdict": "declined",
+      "lineage": "Illustrated zoo and gardens guide maps",
+      "thesis": "Research spaces as adjacent colored territories around a central graph.",
+      "palette": ["#8ed462", "#f5f1e4", "#2c2e2a", "#ff705d"],
+      "materials": ["morphing coastlines", "flat color lobes", "capsule labels"],
+      "viewport": "A full-frame living map around the citation network.",
+      "case": "Excellent spatial identity, poor fit for dense document tasks.",
+      "risk": "The metaphor would dominate every utilitarian action.",
+      "kept": "One geometry driving graph, layout, and selection remains a useful discipline.",
+      "hero": "https://impeccable.style/worlds/cards/aww2-zoo-gardens-guide-map-hero.webp"
+    },
+    {
+      "id": "declined-cassette-card",
+      "kind": "challenger",
+      "catalogId": "vernacular-ephemera-cassette-j-card",
+      "label": "The Folded Dossier",
+      "verdict": "declined",
+      "lineage": "Handwritten cassette J-cards and folded inlays",
+      "thesis": "Research sessions as folded dossiers with side A and side B views.",
+      "palette": ["#f7f5ef", "#243c8d", "#b7bcc7", "#c7322f"],
+      "materials": ["ballpoint rules", "folded stock", "spine labels"],
+      "viewport": "A research session folded between question and evidence views.",
+      "case": "Memorable folding behavior, weak academic authority.",
+      "risk": "The formal play would obscure standard navigation.",
+      "kept": "Spine and fold hierarchy can improve mobile route switching.",
+      "hero": "https://impeccable.style/worlds/cards/vernacular-ephemera-cassette-j-card-hero.webp"
+    }
+  ],
+  "reroll": {
+    "registers": ["safer", "bolder"]
+  },
+  "buildPath": {
+    "value": "code",
+    "toggle": true
+  },
+  "canon": true,
+  "canonCard": {
+    "id": "canon",
+    "kind": "canon",
+    "label": "The category standard",
+    "lineage": "Conventional SaaS research dashboards",
+    "thesis": "A clean three-column research tool executed at full craft.",
+    "palette": ["#ffffff", "#111827", "#2563eb", "#e5e7eb"],
+    "materials": ["flat cards", "system sans", "blue actions"],
+    "viewport": "Familiar sidebar, document list, chat, and evidence panels.",
+    "risk": "Efficient but indistinguishable from competitors.",
+    "comp": ".impeccable/mocks/decision/canon.webp"
+  },
+  "steer": true
+}

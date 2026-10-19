@@ -39,6 +39,7 @@ export function AdminView() {
   const [maxUses, setMaxUses] = useState(20);
   const [expiresDays, setExpiresDays] = useState(7);
   const [loading, setLoading] = useState(true);
+  const [pendingAction, setPendingAction] = useState<string>();
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -57,7 +58,7 @@ export function AdminView() {
         }),
       ]);
       if (!usersResponse.ok || !invitesResponse.ok) {
-        throw new Error(t("admin.subtitle"));
+        throw new Error(t("common.requestFailed"));
       }
       const [usersPayload, invitesPayload] = await Promise.all([
         usersResponse.json(),
@@ -66,7 +67,9 @@ export function AdminView() {
       setUsers(usersPayload.items ?? []);
       setInvites(invitesPayload.items ?? []);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Failed");
+      setError(
+        reason instanceof Error ? reason.message : t("common.requestFailed"),
+      );
     } finally {
       setLoading(false);
     }
@@ -79,52 +82,67 @@ export function AdminView() {
   async function resetPassword(user: AdminUser) {
     setError("");
     setNotice("");
-    const response = await fetch(
-      `/api/admin/users/${user.id}/reset-password`,
-      { method: "POST", credentials: "include" },
-    );
-    const payload = await response.json();
-    if (!response.ok) {
-      setError(payload.error ?? t("auth.passwordChangeFailed"));
-      return;
+    setPendingAction(`reset:${user.id}`);
+    try {
+      const response = await fetch(
+        `/api/admin/users/${user.id}/reset-password`,
+        { method: "POST", credentials: "include" },
+      );
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error ?? t("auth.passwordChangeFailed"));
+        return;
+      }
+      setNotice(
+        `${user.username} · ${t("admin.temporaryPassword")}: ${payload.temporaryPassword}`,
+      );
+      await load();
+    } finally {
+      setPendingAction(undefined);
     }
-    setNotice(
-      `${user.username} · ${t("admin.temporaryPassword")}: ${payload.temporaryPassword}`,
-    );
-    await load();
   }
 
   async function toggleUser(user: AdminUser) {
-    const response = await fetch(`/api/admin/users/${user.id}/status`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active: !user.active }),
-    });
-    if (!response.ok) {
-      const payload = await response.json();
-      setError(payload.error ?? "Failed");
-      return;
+    setPendingAction(`toggle:${user.id}`);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/status`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !user.active }),
+      });
+      if (!response.ok) {
+        const payload = await response.json();
+        setError(payload.error ?? t("common.requestFailed"));
+        return;
+      }
+      await load();
+    } finally {
+      setPendingAction(undefined);
     }
-    await load();
   }
 
   async function createInviteCode() {
     setError("");
     setNotice("");
-    const response = await fetch("/api/admin/invites", {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ maxUses, expiresDays }),
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      setError(payload.error ?? "Failed");
-      return;
+    setPendingAction("invite");
+    try {
+      const response = await fetch("/api/admin/invites", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ maxUses, expiresDays }),
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        setError(payload.error ?? t("common.requestFailed"));
+        return;
+      }
+      setNotice(`${t("admin.invites")}: ${payload.code}`);
+      await load();
+    } finally {
+      setPendingAction(undefined);
     }
-    setNotice(`${t("admin.invites")}: ${payload.code}`);
-    await load();
   }
 
   function dateLabel(value: string | null) {
@@ -205,13 +223,19 @@ export function AdminView() {
                         <div className={styles.actions}>
                           <button
                             type="button"
+                            disabled={pendingAction === `reset:${user.id}`}
                             onClick={() => void resetPassword(user)}
                           >
-                            <KeyRound size={13} />
+                            {pendingAction === `reset:${user.id}` ? (
+                              <Loader2 className="spin" size={13} />
+                            ) : (
+                              <KeyRound size={13} />
+                            )}
                             {t("admin.resetPassword")}
                           </button>
                           <button
                             type="button"
+                            disabled={pendingAction === `toggle:${user.id}`}
                             onClick={() => void toggleUser(user)}
                           >
                             {user.active
@@ -224,7 +248,9 @@ export function AdminView() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5}>{t("admin.noUsers")}</td>
+                    <td colSpan={5}>
+                      {loading ? t("common.loading") : t("admin.noUsers")}
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -266,9 +292,14 @@ export function AdminView() {
               <button
                 className="primary-button"
                 type="button"
+                disabled={pendingAction === "invite"}
                 onClick={() => void createInviteCode()}
               >
-                <Plus size={14} />
+                {pendingAction === "invite" ? (
+                  <Loader2 className="spin" size={14} />
+                ) : (
+                  <Plus size={14} />
+                )}
                 {t("admin.createInvite")}
               </button>
             </div>
@@ -309,7 +340,9 @@ export function AdminView() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4}>{t("admin.noInvites")}</td>
+                    <td colSpan={4}>
+                      {loading ? t("common.loading") : t("admin.noInvites")}
+                    </td>
                   </tr>
                 )}
               </tbody>

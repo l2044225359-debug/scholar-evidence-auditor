@@ -8,15 +8,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  min-height: 72px;
-  padding: 12px 22px;
+  min-height: 76px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
 
 .header h1 {
   margin: 0;
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 25px;
+  letter-spacing: -0.02em;
 }
 
 .header p {
@@ -28,16 +30,21 @@
 .content {
   display: grid;
   gap: 14px;
-  padding: 18px 22px 32px;
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: 22px 24px 38px;
 }
 
 .formPanel {
   display: grid;
   gap: 14px;
   padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
+  background: var(--surface-muted);
 }
 
 .formPanel > label {
@@ -52,8 +59,8 @@
   width: 100%;
   padding: 10px;
   resize: vertical;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 1px;
   color: var(--text);
   line-height: 1.55;
 }
@@ -86,8 +93,8 @@
   gap: 5px;
   max-width: 260px;
   padding: 4px 7px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
   font-size: 9px;
 }
 
@@ -105,8 +112,8 @@
   display: grid;
   grid-template-columns: 240px minmax(0, 1fr);
   min-height: 500px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 1px;
   background: var(--surface);
   overflow: hidden;
 }
@@ -114,14 +121,14 @@
 .history {
   padding: 12px;
   border-right: 1px solid var(--border);
-  background: #fbfcfc;
+  background: var(--surface-muted);
 }
 
 .history h2 {
   margin: 0 0 10px;
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.05em;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 13px;
   text-transform: uppercase;
 }
 
@@ -132,18 +139,19 @@
   padding: 8px;
   margin-bottom: 5px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 0;
   background: transparent;
   color: var(--text);
   text-align: left;
 }
 
 .historyItem:hover {
-  background: #eef2f2;
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .historyItem.active {
-  border-color: #b9ddd7;
+  border-color: var(--border-strong);
   background: var(--accent-soft);
 }
 
@@ -194,15 +202,19 @@
   display: grid;
   min-width: 70px;
   padding: 7px 9px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
   color: var(--muted);
   font-size: 9px;
 }
 
 .summary strong {
   color: var(--text);
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 21px;
 }
 
 .supported {
@@ -231,8 +243,11 @@
 
 .claim {
   padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 7px;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  border-left: 0;
+  border-right: 0;
+  border-radius: 0;
 }
 
 .claimHeader {
@@ -257,7 +272,8 @@
 
 .claim p {
   margin: 9px 0 5px;
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -272,7 +288,7 @@
   gap: 12px;
   margin-top: 9px;
   padding-top: 8px;
-  border-top: 1px solid #edf0f1;
+  border-top: 1px solid var(--border);
   color: var(--muted);
   font-size: 9px;
 }

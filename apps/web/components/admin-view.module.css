@@ -8,15 +8,17 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  min-height: 72px;
-  padding: 12px 22px;
+  min-height: 76px;
+  padding: 14px 24px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
 
 .header h1 {
   margin: 0;
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 25px;
+  letter-spacing: -0.02em;
 }
 
 .header p {
@@ -28,23 +30,25 @@
 .content {
   display: grid;
   gap: 18px;
-  padding: 20px 22px 32px;
+  width: min(1480px, 100%);
+  margin: 0 auto;
+  padding: 24px 24px 38px;
 }
 
 .notice {
   padding: 10px 12px;
-  border: 1px solid #b9ddd7;
-  border-radius: 6px;
+  border: 1px solid #9bb9b2;
+  border-radius: 1px;
   background: var(--accent-soft);
-  color: #075d57;
+  color: #234f49;
   font-size: 12px;
   word-break: break-all;
 }
 
 .section {
   overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 1px;
   background: var(--surface);
 }
 
@@ -53,8 +57,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  min-height: 58px;
-  padding: 10px 14px;
+  min-height: 56px;
+  padding: 10px 15px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -66,9 +70,9 @@
 
 .sectionTitle h2 {
   margin: 0;
-  font-size: 13px;
+  font-family: var(--font-display);
+  font-size: 15px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 
 .inviteControls {
@@ -88,8 +92,8 @@
   width: 76px;
   height: 34px;
   padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 1px;
 }
 
 .tableShell {
@@ -105,14 +109,14 @@
 .tableShell th,
 .tableShell td {
   padding: 11px 13px;
-  border-bottom: 1px solid #edf0f1;
+  border-bottom: 1px solid var(--border);
   text-align: left;
   font-size: 11px;
   vertical-align: middle;
 }
 
 .tableShell th {
-  background: #fafbfb;
+  background: var(--surface-muted);
   color: var(--muted);
   font-size: 9px;
   text-transform: uppercase;
@@ -143,14 +147,14 @@
 .statusInactive {
   display: inline-flex;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 9px;
   font-weight: 700;
 }
 
 .statusActive {
   background: var(--accent-soft);
-  color: #075d57;
+  color: #234f49;
 }
 
 .statusInactive {
@@ -171,8 +175,8 @@
   gap: 5px;
   min-height: 29px;
   padding: 0 8px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  border-radius: 1px;
   background: var(--surface);
   color: var(--text);
   font-size: 10px;

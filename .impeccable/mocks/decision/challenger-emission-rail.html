@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing:border-box; }
+    body { margin:0; width:1440px; height:900px; overflow:hidden; background:#171b1d; color:#d9d7cb; font:13px/1.45 "Segoe UI",sans-serif; }
+    .shell { height:900px; display:grid; grid-template-columns:226px 1fr 345px; grid-template-rows:64px 88px 1fr; }
+    .nav { grid-row:1/4; background:#111517; border-right:1px solid #3e4648; padding:20px 15px; }
+    .brand { font:700 21px Georgia,serif; letter-spacing:.03em; }
+    .brand small { display:block; margin-top:5px; color:#7f8b8d; font:700 8px "Segoe UI"; letter-spacing:.18em; text-transform:uppercase; }
+    .navlist { margin-top:38px; }
+    .navlist div { height:45px; display:grid; grid-template-columns:27px 1fr; align-items:center; border-top:1px solid #343c3e; color:#8b999b; }
+    .navlist .active { color:#d9d7cb; border-top:1px solid #d2b53f; }
+    .navlist b { color:#d2b53f; font:700 9px "Segoe UI"; }
+    .navfoot { margin-top:220px; color:#718083; font-size:9px; border-top:1px solid #343c3e; padding-top:10px; }
+    .top { grid-column:2/4; border-bottom:1px solid #3e4648; display:flex; align-items:center; justify-content:space-between; padding:0 24px; }
+    .top strong { font:700 14px "Segoe UI"; letter-spacing:.08em; text-transform:uppercase; }
+    .status { display:flex; gap:16px; font-size:9px; letter-spacing:.08em; color:#899598; }
+    .status i { display:inline-block; width:22px; height:1px; background:#d2b53f; margin-right:5px; vertical-align:middle; }
+    .railband { grid-column:2/4; border-bottom:1px solid #3e4648; background:#1b2022; padding:14px 24px; position:relative; }
+    .railband h1 { margin:0; font:700 28px Georgia,serif; }
+    .spectrum { position:absolute; left:24px; right:24px; bottom:18px; height:36px; border-bottom:1px solid #4c5658; }
+    .spectrum .line { position:absolute; bottom:0; width:1px; background:#d9d7cb; }
+    .l1 { left:9%; height:22px; background:#d2b53f!important; box-shadow:0 0 8px #d2b53f66; }
+    .l2 { left:29%; height:13px; background:#4c7986!important; }
+    .l3 { left:54%; height:27px; }
+    .l4 { left:77%; height:17px; background:#4c7986!important; }
+    .l5 { left:92%; height:10px; }
+    .spectrum span { position:absolute; top:-16px; font-size:8px; color:#6f7d80; }
+    .main { padding:18px 24px; display:grid; grid-template-columns:258px 1fr; gap:22px; min-width:0; background:#1b2022; }
+    .docs { border-right:1px solid #3e4648; padding-right:18px; }
+    .docs h2 { margin:0 0 8px; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:#7f8b8d; }
+    .paper { min-height:43px; border-top:1px solid #343c3e; display:grid; grid-template-columns:20px 1fr; gap:6px; align-items:center; }
+    .paper b { color:#d2b53f; font:700 9px "Segoe UI"; }
+    .paper strong { display:block; color:#d9d7cb; font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .paper span { color:#718083; font-size:8px; }
+    .chat { min-width:0; display:grid; grid-template-rows:auto 1fr auto; }
+    .context { border-bottom:1px solid #3e4648; padding-bottom:10px; display:flex; justify-content:space-between; font-size:9px; color:#7f8b8d; }
+    .context strong { color:#d9d7cb; }
+    .question { margin:18px 0 14px 120px; border-left:2px solid #d2b53f; background:#23292b; padding:11px 13px; max-width:540px; }
+    .answer { border-top:1px solid #3e4648; padding-top:15px; max-width:680px; }
+    .answer h2 { margin:0 0 10px; font:700 22px Georgia,serif; }
+    .answer p { font:13.5px/1.7 Georgia,serif; color:#c6c6bb; }
+    .cite { color:#d2b53f; font:700 9px "Segoe UI"; vertical-align:super; }
+    .composer { height:52px; border:1px solid #566164; background:#202628; display:flex; align-items:center; justify-content:space-between; padding:0 13px; color:#718083; }
+    .composer span { color:#d2b53f; font-size:18px; }
+    .evidence { background:#14191b; border-left:1px solid #3e4648; padding:18px; }
+    .ehead { display:flex; justify-content:space-between; border-bottom:1px solid #3e4648; padding-bottom:11px; font-size:10px; letter-spacing:.08em; }
+    .ehead span { color:#d2b53f; }
+    .card { background:#1d2325; border-top:1px solid #4c5658; margin-top:12px; padding:11px; }
+    .meta { display:flex; justify-content:space-between; font-size:9px; color:#7f8b8d; }
+    .page { color:#d2b53f; }
+    .quote { margin-top:9px; font:12.5px/1.55 Georgia,serif; color:#c6c6bb; }
+    .foot { margin-top:9px; border-top:1px solid #343c3e; padding-top:8px; display:flex; justify-content:space-between; font-size:8px; color:#7f8b8d; }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="nav">
+      <div class="brand">Scholar<small>Signal evidence bench</small></div>
+      <div class="navlist">
+        <div class="active"><b>01</b><span>研究工作台</span></div>
+        <div><b>02</b><span>文档库</span></div>
+        <div><b>03</b><span>引用图谱</span></div>
+        <div><b>04</b><span>证据审计</span></div>
+        <div><b>05</b><span>管理中心</span></div>
+        <div><b>06</b><span>系统状态</span></div>
+      </div>
+      <div class="navfoot">admin / 管理员<br>LOCAL RESEARCH SERVICE / ONLINE</div>
+    </aside>
+    <header class="top">
+      <strong>信号证据工作台</strong>
+      <div class="status"><span><i></i>混合检索</span><span><i></i>qwen3.8-flash</span><span><i></i>7 篇论文</span></div>
+    </header>
+    <section class="railband">
+      <h1>Attention Is All You Need</h1>
+      <div class="spectrum"><i class="line l1"></i><i class="line l2"></i><i class="line l3"></i><i class="line l4"></i><i class="line l5"></i><span style="left:7%">RETRIEVAL</span><span style="left:27%">RERANK</span><span style="left:52%">EVIDENCE</span><span style="left:75%">AUDIT</span><span style="left:90%">TRACE</span></div>
+    </section>
+    <main class="main">
+      <aside class="docs">
+        <h2>Collection / 07</h2>
+        <div class="paper"><b>01</b><div><strong>attention.pdf</strong><span>Docling · 2.1 MB</span></div></div>
+        <div class="paper"><b>02</b><div><strong>attention_scan_batch20.pdf</strong><span>OCR · 5.5 MB</span></div></div>
+        <div class="paper"><b>03</b><div><strong>rag_2005.11401.pdf</strong><span>RAG · 885 KB</span></div></div>
+        <div class="paper"><b>04</b><div><strong>dpr_2004.04906.pdf</strong><span>DPR · 375 KB</span></div></div>
+        <div class="paper"><b>05</b><div><strong>self_rag_2310.11511.pdf</strong><span>Self-RAG · 1.3 MB</span></div></div>
+        <div class="paper"><b>06</b><div><strong>lost_in_middle_2307.03172.pdf</strong><span>Context · 730 KB</span></div></div>
+      </aside>
+      <section class="chat">
+        <div class="context"><span>CONTEXT <strong>attention.pdf</strong></span><span>DENSE + SPARSE + RERANK</span></div>
+        <div>
+          <div class="question">Transformer 论文提出了什么模型？它的核心机制是什么？</div>
+          <div class="answer">
+            <h2>全注意力序列模型</h2>
+            <p>论文提出 Transformer，完全基于注意力机制，不再依赖循环和卷积 <span class="cite">01</span><span class="cite">02</span>。</p>
+            <p>模型由编码器与解码器堆栈构成，多头自注意力允许不同表示子空间并行建模，缩放点积注意力稳定梯度并改善计算效率 <span class="cite">03</span><span class="cite">04</span>。</p>
+          </div>
+        </div>
+        <div class="composer">向选中的论文提问 <span>↗</span></div>
+      </section>
+    </main>
+    <aside class="evidence">
+      <div class="ehead"><strong>EVIDENCE TRACE</strong><span>05 SIGNALS</span></div>
+      <article class="card"><div class="meta"><strong>attention.pdf</strong><span class="page">P.1</span></div><div class="quote">“We propose a new simple network architecture, the Transformer, based solely on attention mechanisms.”</div><div class="foot"><span>RERANK 0.71</span><span>OPEN PAGE ↗</span></div></article>
+      <article class="card"><div class="meta"><strong>attention.pdf</strong><span class="page">P.3</span></div><div class="quote">“The encoder is composed of a stack of N = 6 identical layers.”</div><div class="foot"><span>RERANK 0.67</span><span>OPEN PAGE ↗</span></div></article>
+      <article class="card"><div class="meta"><strong>attention.pdf</strong><span class="page">P.4</span></div><div class="quote">“Multi-head attention allows the model to jointly attend to information from different representation subspaces.”</div><div class="foot"><span>RERANK 0.58</span><span>OPEN PAGE ↗</span></div></article>
+    </aside>
+  </div>
+</body>
+</html>

@@ -151,6 +151,8 @@
 }
 
 .graphPanel {
+  display: grid;
+  place-items: center;
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border-strong);
@@ -160,7 +162,8 @@
 .graph {
   display: block;
   width: 100%;
-  min-height: 560px;
+  height: clamp(560px, 62vh, 720px);
+  min-height: 0;
 }
 
 .edge {
@@ -475,6 +478,7 @@
   }
 
   .graph {
-    min-height: 420px;
+    height: clamp(420px, 58vh, 560px);
+    min-height: 0;
   }
 }

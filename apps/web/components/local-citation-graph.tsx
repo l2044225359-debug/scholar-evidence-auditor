@@ -208,11 +208,11 @@ export function LocalCitationGraph() {
 
   const layout = useMemo(() => {
     const nodes = payload?.nodes ?? [];
-    const width = 780;
-    const height = 560;
+    const width = 1100;
+    const height = 620;
     const centerX = width / 2;
     const centerY = height / 2;
-    const radius = Math.min(230, 80 + nodes.length * 10);
+    const radius = Math.min(270, 130 + nodes.length * 14);
     const positions = new Map<string, { x: number; y: number }>();
     nodes.forEach((node, index) => {
       const angle = (Math.PI * 2 * index) / Math.max(nodes.length, 1) - Math.PI / 2;

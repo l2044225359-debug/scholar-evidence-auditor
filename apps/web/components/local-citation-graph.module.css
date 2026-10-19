@@ -214,6 +214,27 @@
   grid-auto-rows: max-content;
   gap: 12px;
   min-width: 0;
+  height: clamp(560px, 62vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 5px;
+  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.side::-webkit-scrollbar {
+  width: 8px;
+}
+
+.side::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.side::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  background: var(--border-strong);
+  background-clip: padding-box;
 }
 
 .panel,
@@ -436,6 +457,9 @@
 
   .side {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    height: auto;
+    overflow: visible;
+    padding-right: 0;
   }
 
   .entityCounts {

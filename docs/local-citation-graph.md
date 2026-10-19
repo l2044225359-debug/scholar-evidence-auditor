@@ -37,6 +37,10 @@ graph with the citation edges. Paper PageRank remains scoped to the citation
 subgraph, while the page separately reports total heterogeneous nodes,
 relations, components and density.
 
+The desktop inspector uses an independent vertical scroll area. Foundational
+paper titles wrap instead of being truncated, and paper details plus entity
+chips remain reachable without moving the graph or page body.
+
 ## Future Work synthesis
 
 Extracted Future Work passages are sent to `qwen3.8-max`. The synthesis:

@@ -3,7 +3,7 @@
 The research workspace exposes three curated retrieval scopes:
 
 - **Transformer**: attention, encoder-decoder and Transformer architecture papers.
-- **RAG**: retrieval, dense passage retrieval, reranking and context-use papers.
+- **RAG**: RAG, DPR, Self-RAG and Lost in the Middle papers.
 - **Agent**: reasoning, planning, tool-use and agentic retrieval papers.
 
 Collections are generated from the current indexed document list by the

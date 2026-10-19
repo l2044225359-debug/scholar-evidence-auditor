@@ -24,7 +24,7 @@ const collectionDefinitions: CollectionDefinition[] = [
       /self[_-]?rag/i,
       /(^|[_-])dpr([_-]|$)/i,
       /retriev/i,
-      /lost[_-]?in[_-]?the[_-]?middle/i,
+      /lost[_-]?in[_-]?(the[_-]?)?middle/i,
     ],
   },
   {

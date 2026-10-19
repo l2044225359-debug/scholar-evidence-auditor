@@ -28,7 +28,19 @@ try {
   if ($LASTEXITCODE -ne 0) {
     throw "git bundle verify failed."
   }
-  $hash = (Get-FileHash $OutputPath -Algorithm SHA256).Hash
+  $stream = [IO.File]::OpenRead($OutputPath)
+  try {
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try {
+      $hash = [BitConverter]::ToString(
+        $sha256.ComputeHash($stream)
+      ).Replace("-", "")
+    } finally {
+      $sha256.Dispose()
+    }
+  } finally {
+    $stream.Dispose()
+  }
   $hashFile = "$OutputPath.sha256"
   [IO.File]::WriteAllText(
     $hashFile,

@@ -15,6 +15,7 @@
     "demo:evaluate": "node tests/evaluate.mjs",
     "demo:video": "powershell -ExecutionPolicy Bypass -File scripts/create-demo-video.ps1",
     "docs:technical": "C:\\Users\\lenovo\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe scripts/build-technical-document.py --project-root . --output outputs/Scholar-technical-document.pdf",
+    "git:bundle": "powershell -ExecutionPolicy Bypass -File scripts/build-git-bundle.ps1",
     "submission:package": "powershell -ExecutionPolicy Bypass -File scripts/package-submission.ps1",
     "services:sync": "powershell -ExecutionPolicy Bypass -File scripts/sync-services.ps1",
     "web:dev": "npm --prefix apps/web run dev",

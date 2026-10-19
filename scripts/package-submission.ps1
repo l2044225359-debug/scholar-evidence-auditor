@@ -76,13 +76,19 @@ $deliverables = Join-Path $stage "deliverables"
 New-Item -ItemType Directory -Path $deliverables -Force | Out-Null
 foreach ($name in @(
   "Scholar-demo.mp4",
-  "Scholar-technical-document.pdf"
+  "Scholar-technical-document.pdf",
+  "Scholar-git-history.bundle"
 )) {
   $path = Join-Path $repoRoot "outputs/$name"
   if (-not (Test-Path $path)) {
     throw "Missing required submission deliverable: outputs/$name"
   }
   Copy-Item -LiteralPath $path -Destination (Join-Path $deliverables $name)
+}
+$bundleHash = "$($repoRoot)/outputs/Scholar-git-history.bundle.sha256"
+if (Test-Path $bundleHash) {
+  Copy-Item -LiteralPath $bundleHash `
+    -Destination (Join-Path $deliverables "Scholar-git-history.bundle.sha256")
 }
 
 $samples = Join-Path $stage "samples"

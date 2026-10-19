@@ -170,6 +170,8 @@ checklist are in `docs/public-deployment.md`.
 
 - Team profile: `TEAM.md`
 - Deployment guide: `docs/public-deployment.md`
+- Git development history: `docs/git-history.md`
+- Restorable Git history: `outputs/Scholar-git-history.bundle`
 - Technical document: `outputs/Scholar-technical-document.pdf`
 - Demo video: `outputs/Scholar-demo.mp4`
 - Reproducible package and SHA-256: `outputs/submission/`

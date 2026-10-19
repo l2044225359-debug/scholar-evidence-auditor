@@ -1,14 +1,20 @@
 "use client";
 
 import {
+  Activity,
+  BookOpen,
   CheckCircle2,
   Clock3,
+  Database,
   Files,
   FileText,
+  GitBranch,
   GitCompareArrows,
+  Layers,
   Library,
   Loader2,
   RefreshCw,
+  ScanText,
   Search,
   ShieldAlert,
   Trash2,
@@ -25,7 +31,7 @@ import {
   useState,
 } from "react";
 
-import type { SourceFile } from "@/lib/types";
+import type { KnowledgeOverview, SourceFile } from "@/lib/types";
 
 import { useLanguage } from "./language-provider";
 import styles from "./data-views.module.css";
@@ -105,6 +111,8 @@ export function DocumentsView() {
   const { data: session } = useSession();
   const [files, setFiles] = useState<SourceFile[]>([]);
   const [jobs, setJobs] = useState<IndexJob[]>([]);
+  const [overview, setOverview] = useState<KnowledgeOverview>();
+  const [overviewError, setOverviewError] = useState("");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [pendingJob, setPendingJob] = useState<string>();
@@ -140,17 +148,47 @@ export function DocumentsView() {
     setJobs(payload.items ?? []);
   }, [isAdmin, t]);
 
-  const refresh = useCallback(async () => {
+  const loadOverview = useCallback(async (force = false) => {
+    setOverviewError("");
+    try {
+      const response = await fetch(
+        `/api/knowledge-overview${force ? "?refresh=1" : ""}`,
+        {
+          cache: "no-store",
+          credentials: "include",
+        },
+      );
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          payload.detail ??
+            payload.error ??
+            t("knowledge.loadError"),
+        );
+      }
+      setOverview(payload);
+    } catch (reason) {
+      setOverviewError(
+        reason instanceof Error ? reason.message : t("knowledge.loadError"),
+      );
+    }
+  }, [t]);
+
+  const refresh = useCallback(async (forceOverview = false) => {
     setLoading(true);
     setError("");
     try {
-      await Promise.all([loadFiles(), loadJobs()]);
+      await Promise.all([
+        loadFiles(),
+        loadJobs(),
+        loadOverview(forceOverview),
+      ]);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t("documents.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [loadFiles, loadJobs, t]);
+  }, [loadFiles, loadJobs, loadOverview, t]);
 
   useEffect(() => {
     void refresh();
@@ -250,6 +288,7 @@ export function DocumentsView() {
         if (fileInput.current) fileInput.current.value = "";
         setNotice(t("documents.uploadBatchSuccess"));
         await loadJobs();
+        await loadOverview(true);
       }
     } catch (reason) {
       setError(
@@ -298,6 +337,7 @@ export function DocumentsView() {
             : t("documents.uploadBatchSuccess"),
         );
         await loadJobs();
+        await loadOverview(true);
       }
     } catch (reason) {
       setError(
@@ -349,6 +389,7 @@ export function DocumentsView() {
         return;
       }
       await loadFiles();
+      await loadOverview(true);
     } finally {
       setPendingDelete(undefined);
     }
@@ -359,6 +400,18 @@ export function DocumentsView() {
     if (job.status === "running") return t("documents.processing");
     if (job.status === "completed") return t("documents.completed");
     return t("documents.failed");
+  }
+
+  function numberLabel(value: number) {
+    return value.toLocaleString(locale === "zh" ? "zh-CN" : "en-US");
+  }
+
+  function healthLabel(status?: KnowledgeOverview["health"]["status"]) {
+    if (status === "healthy") return t("knowledge.healthy");
+    if (status === "attention") return t("knowledge.attention");
+    if (status === "degraded") return t("knowledge.degraded");
+    if (status === "indexing") return t("knowledge.indexing");
+    return t("knowledge.empty");
   }
 
   const duplicateMatch = duplicatePrompt?.preflight.matches[0];
@@ -382,6 +435,119 @@ export function DocumentsView() {
       <main className={styles.content}>
         {error ? <div className="error-banner">{error}</div> : null}
         {notice ? <div className={styles.notice}>{notice}</div> : null}
+
+        <section className={styles.overviewPanel}>
+          <div className={styles.overviewHeader}>
+            <div className={styles.overviewHeading}>
+              <span className={styles.overviewEyebrow}>
+                <Database size={14} />
+                {t("knowledge.eyebrow")}
+              </span>
+              <div>
+                <h2>{t("knowledge.title")}</h2>
+                <p>{t("knowledge.subtitle")}</p>
+              </div>
+            </div>
+            <span className={styles.overviewTimestamp}>
+              {overview?.generated_at
+                ? `${t("knowledge.updated")} ${new Date(
+                    overview.generated_at,
+                  ).toLocaleString(
+                    locale === "zh" ? "zh-CN" : "en-US",
+                    {
+                      month: "2-digit",
+                      day: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}`
+                : t("knowledge.syncing")}
+            </span>
+          </div>
+
+          {overviewError ? (
+            <div className={styles.overviewUnavailable}>
+              <ShieldAlert size={15} />
+              <span>{overviewError}</span>
+              <button
+                type="button"
+                onClick={() => void loadOverview(true)}
+              >
+                {t("documents.retry")}
+              </button>
+            </div>
+          ) : (
+            <div className={styles.overviewGrid}>
+              <div className={styles.overviewMetric}>
+                <span className={styles.overviewLabel}>
+                  <Files size={14} />
+                  {t("knowledge.documents")}
+                </span>
+                <strong>{overview ? numberLabel(overview.documents) : "—"}</strong>
+                <small>{t("knowledge.documentsHint")}</small>
+              </div>
+              <div className={styles.overviewMetric}>
+                <span className={styles.overviewLabel}>
+                  <BookOpen size={14} />
+                  {t("knowledge.pages")}
+                </span>
+                <strong>{overview ? numberLabel(overview.pages) : "—"}</strong>
+                <small>{t("knowledge.pagesHint")}</small>
+              </div>
+              <div className={styles.overviewMetric}>
+                <span className={styles.overviewLabel}>
+                  <Layers size={14} />
+                  {t("knowledge.chunks")}
+                </span>
+                <strong>{overview ? numberLabel(overview.chunks) : "—"}</strong>
+                <small>{t("knowledge.chunksHint")}</small>
+              </div>
+              <div className={styles.overviewMetric}>
+                <span className={styles.overviewLabel}>
+                  <ScanText size={14} />
+                  {t("knowledge.ocrPages")}
+                </span>
+                <strong>{overview ? numberLabel(overview.ocr_pages) : "—"}</strong>
+                <small>{t("knowledge.ocrPagesHint")}</small>
+              </div>
+              <div className={styles.overviewMetric}>
+                <span className={styles.overviewLabel}>
+                  <GitBranch size={14} />
+                  {t("knowledge.citationEdges")}
+                </span>
+                <strong>
+                  {overview ? numberLabel(overview.citation_edges) : "—"}
+                </strong>
+                <small>{t("knowledge.citationEdgesHint")}</small>
+              </div>
+              <div
+                className={styles.overviewMetric}
+                data-health={overview?.health.status ?? "empty"}
+              >
+                <span className={styles.overviewLabel}>
+                  <Activity size={14} />
+                  {t("knowledge.health")}
+                </span>
+                <strong>
+                  {overview ? numberLabel(overview.health.score) : "—"}
+                  {overview ? <em>%</em> : null}
+                </strong>
+                <div className={styles.healthTrack}>
+                  <span
+                    style={{
+                      width: `${overview?.health.score ?? 0}%`,
+                    }}
+                  />
+                </div>
+                <small>
+                  {overview
+                    ? healthLabel(overview.health.status)
+                    : t("knowledge.syncing")}
+                </small>
+              </div>
+            </div>
+          )}
+        </section>
 
         {isAdmin ? (
           <section className={styles.uploadPanel}>
@@ -566,7 +732,7 @@ export function DocumentsView() {
               <button
                 className="icon-button"
                 type="button"
-                onClick={() => void refresh()}
+                onClick={() => void refresh(true)}
                 aria-label={t("system.refresh")}
               >
                 <RefreshCw className={loading ? "spin" : ""} size={14} />

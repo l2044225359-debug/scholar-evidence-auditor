@@ -31,6 +31,9 @@
 - The local citation graph processed all 7 current papers, produced 2 local
   citation edges and 5 weakly connected components, and calculated PageRank for
   every node. The UI supports a 20-paper corpus limit.
+- The knowledge-base overview reports 7 documents, 129 pages, 265 vector
+  chunks, 1 OCR-recovered page, 2 local citation edges and a 100/100 health
+  score. Document and vector chunk counts match exactly.
 - Future Work passages were extracted from 5 papers and synthesized by
   `qwen3.8-max` into a prioritized research agenda.
 - The WSL production build and TypeScript checks pass.

@@ -638,6 +638,10 @@ _SENTENCE_PATTERN = re.compile(r"(?<=[。！？.!?])\s+")
 _FINGERPRINT_CACHE: dict[str, tuple[int, int, dict]] = {}
 _ARXIV_METADATA_CACHE: dict[str, tuple[float, dict]] = {}
 _ARXIV_METADATA_LOCK = Lock()
+_PDF_OVERVIEW_CACHE: dict[str, tuple[int, int, dict]] = {}
+_KNOWLEDGE_OVERVIEW_CACHE: dict[str, tuple[float, dict]] = {}
+_KNOWLEDGE_OVERVIEW_LOCK = Lock()
+_KNOWLEDGE_OVERVIEW_TTL = 30
 
 
 def _normalize_pdf_text(value: str) -> str:
@@ -777,6 +781,271 @@ def _existing_document_fingerprints(app, user_id: str) -> list[dict]:
             }
         )
     return results
+
+
+def _pdf_overview_profile(path: Path) -> dict:
+    import fitz
+
+    stat = path.stat()
+    key = str(path.resolve())
+    cached = _PDF_OVERVIEW_CACHE.get(key)
+    if cached and cached[0] == stat.st_size and cached[1] == stat.st_mtime_ns:
+        return cached[2]
+
+    low_text_pages = []
+    with fitz.open(str(path)) as document:
+        page_count = document.page_count
+        for index in range(page_count):
+            text = _normalize_pdf_text(
+                document.load_page(index).get_text("text", sort=True)
+            )
+            if len(text) < 80:
+                low_text_pages.append(index + 1)
+
+    profile = {
+        "page_count": page_count,
+        "low_text_pages": low_text_pages,
+    }
+    _PDF_OVERVIEW_CACHE[key] = (stat.st_size, stat.st_mtime_ns, profile)
+    return profile
+
+
+def _page_number(value) -> int | None:
+    if isinstance(value, int):
+        return value if value > 0 else None
+    match = re.search(r"\d+", str(value or ""))
+    if not match:
+        return None
+    number = int(match.group(0))
+    return number if number > 0 else None
+
+
+def _local_citation_stats(items: list[dict]) -> dict:
+    nodes = []
+    extraction_errors = []
+    for item in items[:20]:
+        fingerprint = item["fingerprint"]
+        try:
+            sections = _extract_pdf_citation_sections(Path(item["path"]))
+        except Exception as exc:
+            extraction_errors.append(
+                {"file": item["name"], "error": str(exc)}
+            )
+            sections = {"references": []}
+        nodes.append(
+            {
+                "id": item["id"],
+                "title": _normalize_pdf_text(
+                    str(fingerprint.get("title") or item["name"])
+                ),
+                "arxiv_id": str(
+                    fingerprint.get("canonical_id") or ""
+                ).replace("arxiv:", ""),
+                "references": sections["references"],
+            }
+        )
+
+    edges = set()
+    for source in nodes:
+        reference_blob = _normalize_for_match(
+            " ".join(source["references"])
+        )
+        if not reference_blob:
+            continue
+        for target in nodes:
+            if source["id"] == target["id"]:
+                continue
+            matched = bool(
+                target["arxiv_id"]
+                and _normalize_for_match(target["arxiv_id"])
+                in reference_blob
+            )
+            target_title = _normalize_for_match(target["title"])
+            if (
+                not matched
+                and len(target_title) >= 16
+                and target_title in reference_blob
+            ):
+                matched = True
+            if not matched and target_title:
+                words = target_title.split()
+                probe = " ".join(words[: min(10, len(words))])
+                if len(probe) >= 18 and probe in reference_blob:
+                    matched = True
+            if matched:
+                edges.add((source["id"], target["id"]))
+
+    return {
+        "edge_count": len(edges),
+        "extraction_errors": extraction_errors,
+    }
+
+
+def _knowledge_overview(
+    app,
+    user_id: str,
+    force_refresh: bool = False,
+) -> dict:
+    index = app.index_manager.indices[0]
+    source_model = index._resources["Source"]
+    index_model = index._resources["Index"]
+    storage_path = Path(index._resources["FileStoragePath"])
+
+    source_statement = select(source_model)
+    if index.config.get("private", False):
+        source_statement = source_statement.where(
+            source_model.user == user_id
+        )
+    with Session(engine) as session:
+        sources = [row[0] for row in session.execute(source_statement).all()]
+        index_rows = session.execute(
+            select(
+                index_model.source_id,
+                index_model.target_id,
+                index_model.relation_type,
+            )
+        ).all()
+
+    signature = json.dumps(
+        {
+            "sources": [
+                [source.id, source.name, source.path, source.size]
+                for source in sources
+            ],
+            "index_rows": len(index_rows),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
+    now = time.time()
+    if not force_refresh:
+        with _KNOWLEDGE_OVERVIEW_LOCK:
+            cached = _KNOWLEDGE_OVERVIEW_CACHE.get(user_id)
+            if (
+                cached
+                and cached[0] > now
+                and cached[1].get("_signature") == signature
+            ):
+                payload = deepcopy(cached[1])
+                payload.pop("_signature", None)
+                return payload
+
+    document_targets: dict[str, str] = {}
+    vector_chunk_count = 0
+    document_chunk_count = 0
+    for source_id, target_id, relation_type in index_rows:
+        if relation_type == "document":
+            document_targets[target_id] = source_id
+            document_chunk_count += 1
+        elif relation_type == "vector":
+            vector_chunk_count += 1
+
+    page_text_lengths: dict[str, dict[int, int]] = {}
+    target_ids = list(document_targets)
+    if target_ids:
+        try:
+            stored_documents = index._docstore.get(target_ids)
+        except Exception as exc:
+            logger.warning("Unable to inspect knowledge chunks: %s", exc)
+            stored_documents = []
+        for document in stored_documents:
+            source_id = document_targets.get(document.doc_id)
+            page = _page_number((document.metadata or {}).get("page_label"))
+            if not source_id or page is None:
+                continue
+            text_length = len(_normalize_pdf_text(document.text or ""))
+            page_map = page_text_lengths.setdefault(source_id, {})
+            page_map[page] = max(page_map.get(page, 0), text_length)
+
+    page_count = 0
+    ocr_page_count = 0
+    missing_ocr_pages = 0
+    missing_file_count = 0
+    for source in sources:
+        stored_path = storage_path / (source.path or "")
+        if not source.path or not stored_path.exists():
+            missing_file_count += 1
+            continue
+        try:
+            profile = _pdf_overview_profile(stored_path)
+        except Exception as exc:
+            logger.warning(
+                "Unable to inspect PDF overview %s: %s",
+                source.name,
+                exc,
+            )
+            missing_file_count += 1
+            continue
+        page_count += int(profile["page_count"])
+        extracted_pages = page_text_lengths.get(source.id, {})
+        for page in profile["low_text_pages"]:
+            if extracted_pages.get(page, 0) >= 40:
+                ocr_page_count += 1
+            else:
+                missing_ocr_pages += 1
+
+    fingerprint_items = _existing_document_fingerprints(app, user_id)
+    citation_stats = _local_citation_stats(fingerprint_items)
+    chunk_delta = abs(document_chunk_count - vector_chunk_count)
+
+    health_score = 100
+    if not sources:
+        health_score = 0
+    else:
+        health_score -= min(35, missing_file_count * 15)
+        if vector_chunk_count == 0:
+            health_score -= 40
+        health_score -= min(20, chunk_delta * 2)
+        health_score -= min(20, missing_ocr_pages * 3)
+        health_score -= min(
+            12,
+            len(citation_stats["extraction_errors"]) * 3,
+        )
+    health_score = max(0, min(100, health_score))
+    if not sources:
+        health_status = "empty"
+    elif health_score >= 90:
+        health_status = "healthy"
+    elif health_score >= 65:
+        health_status = "attention"
+    else:
+        health_status = "degraded"
+
+    payload = {
+        "documents": len(sources),
+        "pages": page_count,
+        "chunks": vector_chunk_count,
+        "ocr_pages": ocr_page_count,
+        "citation_edges": citation_stats["edge_count"],
+        "health": {
+            "score": health_score,
+            "status": health_status,
+            "components": {
+                "document_chunks": document_chunk_count,
+                "vector_chunks": vector_chunk_count,
+                "chunk_delta": chunk_delta,
+                "missing_files": missing_file_count,
+                "low_text_pages": ocr_page_count + missing_ocr_pages,
+                "ocr_recovered_pages": ocr_page_count,
+                "ocr_missing_pages": missing_ocr_pages,
+                "citation_extraction_errors": len(
+                    citation_stats["extraction_errors"]
+                ),
+            },
+        },
+        "generated_at": time.strftime(
+            "%Y-%m-%dT%H:%M:%SZ",
+            time.gmtime(),
+        ),
+        "_signature": signature,
+    }
+    with _KNOWLEDGE_OVERVIEW_LOCK:
+        _KNOWLEDGE_OVERVIEW_CACHE[user_id] = (
+            now + _KNOWLEDGE_OVERVIEW_TTL,
+            deepcopy(payload),
+        )
+    payload.pop("_signature", None)
+    return payload
 
 
 def _sentence_changes(older: str, newer: str) -> dict:
@@ -1523,6 +1792,19 @@ def register_chat_bff(api, app) -> None:
                 status_code=500,
                 content={"error": "files_unavailable", "message": str(exc)},
             )
+
+    def knowledge_overview(request: Request):
+        _check_token(request)
+        user_id = _default_user_id()
+        refresh = request.query_params.get("refresh") == "1"
+        try:
+            return _knowledge_overview(app, user_id, refresh)
+        except Exception as exc:
+            logger.exception("knowledge_overview_failed")
+            raise HTTPException(
+                status_code=503,
+                detail=f"Knowledge overview failed: {exc}",
+            ) from exc
 
     def citation_corpus(request: Request):
         _check_token(request)
@@ -3136,6 +3418,11 @@ def register_chat_bff(api, app) -> None:
 
     api.add_api_route("/api/bff/health", health, methods=["GET"])
     api.add_api_route("/api/bff/files", files, methods=["GET"])
+    api.add_api_route(
+        "/api/bff/knowledge-overview",
+        knowledge_overview,
+        methods=["GET"],
+    )
     api.add_api_route(
         "/api/bff/citation-corpus",
         citation_corpus,

@@ -230,6 +230,33 @@ const files = await filesResponse.json();
 const attention = files.items.find((file) => file.name === "attention.pdf");
 if (!attention) throw new Error("attention.pdf is not indexed");
 
+const overviewResponse = await browserFetch(
+  "/api/knowledge-overview?refresh=1",
+  { signal: AbortSignal.timeout(180_000) },
+);
+if (overviewResponse.status !== 200) {
+  throw new Error(`Knowledge overview HTTP ${overviewResponse.status}`);
+}
+const overview = await overviewResponse.json();
+for (const key of ["documents", "pages", "chunks", "ocr_pages", "citation_edges"]) {
+  if (!Number.isFinite(overview[key]) || overview[key] < 0) {
+    throw new Error(`Knowledge overview has an invalid ${key}`);
+  }
+}
+if (overview.documents !== files.items.length) {
+  throw new Error("Knowledge overview document count is inconsistent");
+}
+if (overview.documents > 0 && (overview.pages === 0 || overview.chunks === 0)) {
+  throw new Error("Knowledge overview is missing pages or chunks");
+}
+if (
+  !Number.isFinite(overview.health?.score) ||
+  overview.health.score < 0 ||
+  overview.health.score > 100
+) {
+  throw new Error("Knowledge overview health score is invalid");
+}
+
 const events = await askAttention(attention.id);
 const done = events.find((event) => event.event === "done");
 if (!done?.data.answer) throw new Error("Frontend SSE is incomplete");

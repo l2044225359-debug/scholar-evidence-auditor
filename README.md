@@ -87,6 +87,10 @@ PDF content, arXiv identity, version labels and body-text overlap against the
 current library, then asks the administrator to keep, replace or retain both
 versions. See `docs/document-ingestion.md`.
 
+The document library includes a live knowledge-base overview for documents,
+pages, vector chunks, OCR-recovered pages, local citation edges and index
+health. See `docs/knowledge-overview.md`.
+
 Citation evidence opens in a local PDF.js academic reader with an outline,
 clickable numeric citations, bidirectional References navigation and a
 page-aligned Chinese/English translation pane. See `docs/pdf-reader.md`.

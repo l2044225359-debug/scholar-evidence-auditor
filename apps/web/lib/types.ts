@@ -30,3 +30,31 @@ export type HealthStatus = {
   version?: string;
   network_backend?: string;
 };
+
+export type KnowledgeOverview = {
+  documents: number;
+  pages: number;
+  chunks: number;
+  ocr_pages: number;
+  citation_edges: number;
+  generated_at: string;
+  health: {
+    score: number;
+    status: "empty" | "healthy" | "attention" | "degraded" | "indexing";
+    components: {
+      document_chunks: number;
+      vector_chunks: number;
+      chunk_delta: number;
+      missing_files: number;
+      low_text_pages: number;
+      ocr_recovered_pages: number;
+      ocr_missing_pages: number;
+      citation_extraction_errors: number;
+    };
+  };
+  queue: {
+    active: number;
+    failed: number;
+    worker_status: "ready" | "busy";
+  };
+};

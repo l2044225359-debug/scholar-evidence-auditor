@@ -43,6 +43,188 @@
   font-size: 12px;
 }
 
+.overviewPanel {
+  margin-bottom: 14px;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-strong);
+  background: var(--surface);
+}
+
+.overviewHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 14px 11px;
+}
+
+.overviewHeading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.overviewEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--citation);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.overviewHeading h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.overviewHeading p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.overviewTimestamp {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+}
+
+.overviewGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  border-top: 1px solid var(--border);
+  background: var(--border);
+}
+
+.overviewMetric {
+  display: grid;
+  grid-template-rows: auto auto minmax(14px, auto);
+  gap: 5px;
+  min-width: 0;
+  min-height: 112px;
+  padding: 12px 13px 11px;
+  background: var(--surface);
+}
+
+.overviewLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.overviewLabel svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.overviewMetric strong {
+  align-self: end;
+  overflow: hidden;
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overviewMetric strong em {
+  margin-left: 2px;
+  color: var(--muted);
+  font-family: "Segoe UI", "Microsoft YaHei", ui-sans-serif, sans-serif;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.overviewMetric small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overviewMetric[data-health="healthy"] .overviewLabel svg,
+.overviewMetric[data-health="healthy"] small {
+  color: var(--accent);
+}
+
+.overviewMetric[data-health="attention"] .overviewLabel svg,
+.overviewMetric[data-health="attention"] small {
+  color: var(--citation);
+}
+
+.overviewMetric[data-health="degraded"] .overviewLabel svg,
+.overviewMetric[data-health="degraded"] small {
+  color: var(--danger);
+}
+
+.healthTrack {
+  align-self: end;
+  height: 3px;
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+
+.healthTrack span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.35s ease;
+}
+
+.overviewMetric[data-health="attention"] .healthTrack span {
+  background: var(--citation);
+}
+
+.overviewMetric[data-health="degraded"] .healthTrack span {
+  background: var(--danger);
+}
+
+.overviewUnavailable {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: #f9efec;
+  color: var(--danger);
+  font-size: 10px;
+}
+
+.overviewUnavailable span {
+  margin-right: auto;
+}
+
+.overviewUnavailable button {
+  min-height: 28px;
+  padding: 0 8px;
+  border: 1px solid #d7a59d;
+  background: var(--surface);
+  color: var(--danger);
+  font-size: 9px;
+  font-weight: 700;
+}
+
 .uploadPanel {
   display: flex;
   align-items: center;
@@ -620,6 +802,12 @@
   font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+@media (max-width: 1180px) {
+  .overviewGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 860px) {
   .pageHeader {
     padding: 12px 16px;
@@ -627,6 +815,25 @@
 
   .content {
     padding: 16px;
+  }
+
+  .overviewHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .overviewHeading {
+    display: grid;
+    gap: 5px;
+  }
+
+  .overviewGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .overviewMetric {
+    min-height: 104px;
   }
 
   .uploadPanel {

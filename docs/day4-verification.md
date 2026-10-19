@@ -34,6 +34,10 @@
 - The knowledge-base overview reports 7 documents, 129 pages, 265 vector
   chunks, 1 OCR-recovered page, 2 local citation edges and a 100/100 health
   score. Document and vector chunk counts match exactly.
+- The workspace exposes Transformer (2 documents), RAG (3 documents) and Agent
+  (2 documents) collections. Selecting RAG checks DPR, RAG and Self-RAG and
+  updates the chat context to `RAG · 3 papers`; stale conversation evidence is
+  cleared on scope changes.
 - Future Work passages were extracted from 5 papers and synthesized by
   `qwen3.8-max` into a prioritized research agenda.
 - The WSL production build and TypeScript checks pass.

@@ -58,3 +58,11 @@ export type KnowledgeOverview = {
     worker_status: "ready" | "busy";
   };
 };
+
+export type KnowledgeCollection = {
+  id: "transformer" | "rag" | "agent";
+  name: string;
+  description: string;
+  file_ids: string[];
+  document_count: number;
+};

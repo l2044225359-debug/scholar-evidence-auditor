@@ -4,6 +4,7 @@ import {
   Activity,
   BookOpen,
   Bot,
+  Boxes,
   Check,
   Copy,
   Cpu,
@@ -28,7 +29,12 @@ import {
   useState,
 } from "react";
 
-import type { ChatMessage, Citation, SourceFile } from "@/lib/types";
+import type {
+  ChatMessage,
+  Citation,
+  KnowledgeCollection,
+  SourceFile,
+} from "@/lib/types";
 import type { Locale } from "@/lib/i18n";
 
 import {
@@ -138,6 +144,9 @@ const demoCitations: Citation[] = [
 export function Workspace() {
   const { locale, t } = useLanguage();
   const [files, setFiles] = useState<SourceFile[]>([]);
+  const [collections, setCollections] = useState<KnowledgeCollection[]>([]);
+  const [collectionsLoading, setCollectionsLoading] = useState(true);
+  const [activeCollection, setActiveCollection] = useState<string>();
   const [filesLoading, setFilesLoading] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [messages, setMessages] = useState<ChatMessage[]>(() =>
@@ -188,6 +197,18 @@ export function Workspace() {
     setFiles(data.items ?? []);
   }
 
+  async function refreshCollections() {
+    const response = await fetch(`/api/collections?language=${locale}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      throw new Error(t("workspace.loadDocumentsError"));
+    }
+    const data = await response.json();
+    setCollections(data.items ?? []);
+  }
+
   useEffect(() => {
     if (demoSeeded) setMessages(demoMessages(locale));
   }, [demoSeeded, locale]);
@@ -205,17 +226,28 @@ export function Workspace() {
 
   useEffect(() => {
     let cancelled = false;
-    refreshFiles()
+    Promise.all([refreshFiles(), refreshCollections()])
       .catch((reason: Error) => {
         if (!cancelled) setError(reason.message);
       })
       .finally(() => {
-        if (!cancelled) setFilesLoading(false);
+        if (!cancelled) {
+          setFilesLoading(false);
+          setCollectionsLoading(false);
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [t]);
+  }, [locale, t]);
+
+  useEffect(() => {
+    if (!activeCollection || collectionsLoading) return;
+    const collection = collections.find((item) => item.id === activeCollection);
+    if (collection) {
+      setSelectedFiles(new Set(collection.file_ids));
+    }
+  }, [activeCollection, collections, collectionsLoading]);
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -225,6 +257,14 @@ export function Workspace() {
   }, [messages, loading]);
 
   const selectedLabel = useMemo(() => {
+    const collection = collections.find(
+      (item) => item.id === activeCollection,
+    );
+    if (collection) {
+      return `${collection.name} · ${collection.document_count} ${t(
+        "workspace.papers",
+      )}`;
+    }
     if (!selectedFiles.size) return t("workspace.allPapers");
     if (selectedFiles.size === 1) {
       const id = [...selectedFiles][0];
@@ -234,7 +274,7 @@ export function Workspace() {
       );
     }
     return `${selectedFiles.size} ${t("workspace.papers")}`;
-  }, [files, locale, selectedFiles, t]);
+  }, [activeCollection, collections, files, locale, selectedFiles, t]);
 
   const suggestions =
     locale === "zh"
@@ -250,12 +290,30 @@ export function Workspace() {
         ];
 
   function toggleFile(fileId: string) {
+    resetConversationForScope();
+    setActiveCollection(undefined);
     setSelectedFiles((current) => {
       const next = new Set(current);
       if (next.has(fileId)) next.delete(fileId);
       else next.add(fileId);
       return next;
     });
+  }
+
+  function selectCollection(collection: KnowledgeCollection) {
+    if (!collection.document_count) return;
+    resetConversationForScope();
+    setActiveCollection(collection.id);
+    setSelectedFiles(new Set(collection.file_ids));
+  }
+
+  function resetConversationForScope() {
+    setDemoSeeded(false);
+    setMessages([]);
+    setCitations([]);
+    setConversationId(undefined);
+    setRouteInfo({});
+    setTraceEvents([]);
   }
 
   async function sendMessage() {
@@ -589,15 +647,56 @@ export function Workspace() {
             <button
               type="button"
               className={
-                selectedFiles.size
+                selectedFiles.size || activeCollection
                   ? styles.allFiles
                   : `${styles.allFiles} ${styles.active}`
               }
-              onClick={() => setSelectedFiles(new Set())}
+              onClick={() => {
+                resetConversationForScope();
+                setActiveCollection(undefined);
+                setSelectedFiles(new Set());
+              }}
             >
               <Library size={15} />
               <span>{t("workspace.allPapers")}</span>
             </button>
+            <div className={styles.fileDivider} />
+            <div className={styles.collectionGroup}>
+              <div className={styles.collectionHeading}>
+                <Boxes size={13} />
+                <span>{t("workspace.collections")}</span>
+                <small>{collectionsLoading ? "…" : collections.length}</small>
+              </div>
+              {collectionsLoading ? (
+                <div className={styles.collectionLoading}>
+                  {t("workspace.collectionsLoading")}
+                </div>
+              ) : null}
+              {collections.map((collection) => (
+                <button
+                  type="button"
+                  key={collection.id}
+                  className={`${styles.collectionItem} ${
+                    activeCollection === collection.id
+                      ? styles.collectionItemActive
+                      : ""
+                  }`}
+                  onClick={() => selectCollection(collection)}
+                  disabled={!collection.document_count}
+                  title={collection.description}
+                >
+                  <span>
+                    <strong>{collection.name}</strong>
+                    <small>{collection.description}</small>
+                  </span>
+                  <em>
+                    {collection.document_count
+                      ? `${collection.document_count} ${t("workspace.papers")}`
+                      : t("workspace.collectionEmpty")}
+                  </em>
+                </button>
+              ))}
+            </div>
             <div className={styles.fileDivider} />
             {files.map((file) => (
               <label className={styles.fileItem} key={file.id}>

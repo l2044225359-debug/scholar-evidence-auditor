@@ -166,6 +166,28 @@ const sessionResponse = await browserFetch("/api/auth/session");
 const session = await sessionResponse.json();
 if (!session.user) throw new Error("Credentials login failed");
 
+const collectionsResponse = await browserFetch("/api/collections?language=zh");
+if (collectionsResponse.status !== 200) {
+  throw new Error(`Collections HTTP ${collectionsResponse.status}`);
+}
+const collections = await collectionsResponse.json();
+const collectionIds = new Set(collections.items?.map((item) => item.id));
+for (const id of ["transformer", "rag", "agent"]) {
+  if (!collectionIds.has(id)) {
+    throw new Error(`Missing knowledge collection: ${id}`);
+  }
+}
+for (const collection of collections.items) {
+  if (
+    !collection.name ||
+    !collection.description ||
+    !Array.isArray(collection.file_ids) ||
+    collection.document_count !== collection.file_ids.length
+  ) {
+    throw new Error(`Invalid knowledge collection: ${collection.id}`);
+  }
+}
+
 const graphPage = await browserFetch("/citation-graph");
 if (graphPage.status !== 200) {
   throw new Error(`Citation page HTTP ${graphPage.status}`);

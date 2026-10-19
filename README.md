@@ -91,6 +91,10 @@ The document library includes a live knowledge-base overview for documents,
 pages, vector chunks, OCR-recovered pages, local citation edges and index
 health. See `docs/knowledge-overview.md`.
 
+The research workspace also provides Transformer, RAG and Agent knowledge
+collections. Selecting a collection scopes chat retrieval to its real indexed
+document IDs. See `docs/knowledge-collections.md`.
+
 Citation evidence opens in a local PDF.js academic reader with an outline,
 clickable numeric citations, bidirectional References navigation and a
 page-aligned Chinese/English translation pane. See `docs/pdf-reader.md`.

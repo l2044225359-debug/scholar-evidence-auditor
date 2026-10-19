@@ -6,7 +6,7 @@ import os
 import shutil
 import subprocess
 import time
-from collections import deque
+from collections import Counter, deque
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
@@ -66,9 +66,42 @@ class LocalCitationEdge(BaseModel):
     target: str
 
 
+class LocalEntityNode(BaseModel):
+    id: str
+    type: Literal[
+        "paper",
+        "author",
+        "topic",
+        "method",
+        "dataset",
+        "metric",
+        "claim",
+    ]
+    label: str
+    paper_ids: list[str] = Field(default_factory=list)
+    year: int | None = None
+    authors: list[str] = Field(default_factory=list)
+    arxiv_id: str = ""
+    doi: str = ""
+
+
+class LocalEntityEdge(BaseModel):
+    source: str
+    target: str
+    relation: str
+    evidence: str = ""
+    confidence: float = 0
+
+
+class LocalEntityGraph(BaseModel):
+    nodes: list[LocalEntityNode] = Field(default_factory=list)
+    edges: list[LocalEntityEdge] = Field(default_factory=list)
+
+
 class LocalGraphRequest(BaseModel):
     papers: list[LocalCitationPaper]
     edges: list[LocalCitationEdge] = Field(default_factory=list)
+    entity_graph: LocalEntityGraph | None = None
 
 
 def _cache_path(url: str) -> Path:
@@ -595,18 +628,21 @@ def create_local_graph(request: LocalGraphRequest):
         raise HTTPException(status_code=422, detail="No local papers supplied")
 
     graph = nx.DiGraph()
+    heterogeneous_graph = nx.DiGraph()
     paper_by_id = {paper.id: paper for paper in request.papers[:20]}
     for paper in paper_by_id.values():
-        graph.add_node(
-            paper.id,
-            title=paper.title,
-            year=paper.year,
-            authors=paper.authors,
-            arxiv_id=paper.arxiv_id,
-            doi=paper.doi,
-            abstract=paper.abstract,
-            future_work=paper.future_work,
-        )
+        paper_attributes = {
+            "title": paper.title,
+            "year": paper.year,
+            "authors": paper.authors,
+            "arxiv_id": paper.arxiv_id,
+            "doi": paper.doi,
+            "abstract": paper.abstract,
+            "future_work": paper.future_work,
+            "type": "paper",
+        }
+        graph.add_node(paper.id, **paper_attributes)
+        heterogeneous_graph.add_node(paper.id, **paper_attributes)
     for edge in request.edges:
         if (
             edge.source in graph
@@ -618,6 +654,53 @@ def create_local_graph(request: LocalGraphRequest):
                 edge.target,
                 relation="cites",
             )
+            heterogeneous_graph.add_edge(
+                edge.source,
+                edge.target,
+                relation="cites",
+                evidence="Local References match",
+                confidence=1.0,
+            )
+
+    entity_paper_node_map: dict[str, str] = {}
+    if request.entity_graph:
+        for entity in request.entity_graph.nodes:
+            if entity.type == "paper":
+                paper_id = (
+                    entity.paper_ids[0]
+                    if entity.paper_ids
+                    else entity.id.removeprefix("paper:")
+                )
+                if paper_id in paper_by_id:
+                    entity_paper_node_map[entity.id] = paper_id
+                continue
+            heterogeneous_graph.add_node(
+                entity.id,
+                type=entity.type,
+                label=entity.label,
+                paper_ids=entity.paper_ids,
+            )
+        for entity_edge in request.entity_graph.edges:
+            source = entity_paper_node_map.get(
+                entity_edge.source,
+                entity_edge.source,
+            )
+            target = entity_paper_node_map.get(
+                entity_edge.target,
+                entity_edge.target,
+            )
+            if (
+                source in heterogeneous_graph
+                and target in heterogeneous_graph
+                and source != target
+            ):
+                heterogeneous_graph.add_edge(
+                    source,
+                    target,
+                    relation=entity_edge.relation,
+                    evidence=entity_edge.evidence,
+                    confidence=entity_edge.confidence,
+                )
 
     pagerank = (
         nx.pagerank(graph, alpha=0.85)
@@ -674,10 +757,22 @@ def create_local_graph(request: LocalGraphRequest):
         if graph.number_of_nodes()
         else 0
     )
+    entity_type_counts = Counter(
+        attrs.get("type", "unknown")
+        for _, attrs in heterogeneous_graph.nodes(data=True)
+    )
+    entity_node_count = sum(
+        count
+        for entity_type, count in entity_type_counts.items()
+        if entity_type != "paper"
+    )
+    citation_edge_count = graph.number_of_edges()
+    heterogeneous_edge_count = heterogeneous_graph.number_of_edges()
+    entity_relation_count = heterogeneous_edge_count - citation_edge_count
     return {
         "summary": {
             "paper_count": graph.number_of_nodes(),
-            "edge_count": graph.number_of_edges(),
+            "edge_count": citation_edge_count,
             "component_count": components,
             "density": round(nx.density(graph), 6)
             if graph.number_of_nodes() > 1
@@ -685,6 +780,23 @@ def create_local_graph(request: LocalGraphRequest):
             "max_pagerank": max(pagerank.values(), default=0),
             "generated_at": datetime.now(UTC).isoformat(),
             "limit": 20,
+            "entity_node_count": entity_node_count,
+            "entity_relation_count": entity_relation_count,
+            "total_node_count": heterogeneous_graph.number_of_nodes(),
+            "total_edge_count": heterogeneous_edge_count,
+            "entity_type_counts": dict(entity_type_counts),
+            "heterogeneous_component_count": (
+                nx.number_weakly_connected_components(
+                    heterogeneous_graph
+                )
+                if heterogeneous_graph.number_of_nodes()
+                else 0
+            ),
+            "heterogeneous_density": (
+                round(nx.density(heterogeneous_graph), 6)
+                if heterogeneous_graph.number_of_nodes() > 1
+                else 0
+            ),
         },
         "nodes": nodes,
         "edges": [
@@ -705,6 +817,24 @@ def create_local_graph(request: LocalGraphRequest):
             }
             for node in frontier
         ],
+        "heterogeneous_graph": {
+            "nodes": [
+                {"id": node_id, **attrs}
+                for node_id, attrs in heterogeneous_graph.nodes(
+                    data=True
+                )
+            ],
+            "edges": [
+                {
+                    "source": source,
+                    "target": target,
+                    **attrs,
+                }
+                for source, target, attrs in heterogeneous_graph.edges(
+                    data=True
+                )
+            ],
+        },
     }
 
 

@@ -10,6 +10,22 @@ The local Citation Graph page now includes a heterogeneous paper entity layer:
 - `Metric`
 - `Claim`
 
+These entities are inserted into the existing NetworkX graph. A single directed
+graph contains:
+
+- paper-to-paper `cites` edges;
+- paper-to-author `authored_by` edges;
+- paper-to-topic `has_topic` edges;
+- paper-to-method `uses_method` edges;
+- paper-to-dataset `evaluates_on` edges;
+- paper-to-metric `measured_by` edges;
+- paper-to-claim `supports_claim` edges.
+
+PageRank and foundational-paper ranking continue to run only on the paper
+citation subgraph, so high-degree authors or topics cannot distort the
+foundational-paper ordering. Heterogeneous node, relation, component and
+density statistics are reported separately.
+
 ## Extraction contract
 
 `Paper` and `Author` are derived deterministically from local metadata and
@@ -46,8 +62,8 @@ GET /api/citation/local?language=zh&refresh=1
 ```
 
 The Next.js route reuses the local citation corpus, requests the citation graph
-and entity graph in parallel, and then returns both in one payload. The private
-BFF endpoint is:
+and entity graph, sends entity nodes and relations into the Citation Graph
+service, and then returns both in one payload. The private BFF endpoint is:
 
 ```text
 POST /api/bff/paper-entities

@@ -100,6 +100,10 @@ type LocalGraphPayload = {
     density: number;
     max_pagerank: number;
     limit: number;
+    entity_node_count?: number;
+    entity_relation_count?: number;
+    total_node_count?: number;
+    total_edge_count?: number;
   };
   nodes: LocalNode[];
   edges: LocalEdge[];
@@ -306,6 +310,14 @@ export function LocalCitationGraph() {
           {t("localGraph.edges")}
         </span>
         <span>
+          <b>{payload.summary.total_node_count ?? payload.summary.paper_count}</b>
+          {t("localGraph.totalNodes")}
+        </span>
+        <span>
+          <b>{payload.summary.total_edge_count ?? payload.summary.edge_count}</b>
+          {t("localGraph.totalEdges")}
+        </span>
+        <span>
           <b>{payload.summary.component_count}</b>
           {t("localGraph.components")}
         </span>
@@ -323,9 +335,13 @@ export function LocalCitationGraph() {
               {t("localGraph.entityRegister")}
             </span>
             <small>
-              {payload.entities.summary.entity_count} {t("localGraph.entityNodes")}
+              {payload.summary.total_node_count ??
+                payload.entities.summary.entity_count}{" "}
+              {t("localGraph.networkxNodes")}
               {" · "}
-              {payload.entities.summary.edge_count} {t("localGraph.entityRelations")}
+              {payload.summary.total_edge_count ??
+                payload.entities.summary.edge_count}{" "}
+              {t("localGraph.networkxRelations")}
               {payload.entities.model ? ` · ${payload.entities.model}` : ""}
             </small>
           </div>

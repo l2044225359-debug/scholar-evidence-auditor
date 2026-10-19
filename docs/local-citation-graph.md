@@ -32,6 +32,11 @@ The page also displays a heterogeneous Paper / Author / Topic / Method /
 Dataset / Metric / Claim entity graph. Selecting a paper shows its extracted
 entities in the inspector. See `docs/paper-entities.md`.
 
+The Citation Graph service inserts those entities into one NetworkX directed
+graph with the citation edges. Paper PageRank remains scoped to the citation
+subgraph, while the page separately reports total heterogeneous nodes,
+relations, components and density.
+
 ## Future Work synthesis
 
 Extracted Future Work passages are sent to `qwen3.8-max`. The synthesis:

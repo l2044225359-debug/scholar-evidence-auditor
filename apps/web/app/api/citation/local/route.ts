@@ -29,18 +29,9 @@ export async function GET(request: Request) {
     if (!corpusResponse.ok) {
       return Response.json(corpus, { status: corpusResponse.status });
     }
-    const [graphResponse, entityResponse] = await Promise.all([
-      fetch(`${serverConfig.citationUrl}/api/local-graph`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          papers: corpus.papers ?? [],
-          edges: corpus.edges ?? [],
-        }),
-        cache: "no-store",
-        signal: AbortSignal.timeout(60_000),
-      }),
-      fetch(`${serverConfig.bffUrl}/api/bff/paper-entities`, {
+    const entityResponse = await fetch(
+      `${serverConfig.bffUrl}/api/bff/paper-entities`,
+      {
         method: "POST",
         headers: bffHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({
@@ -50,10 +41,29 @@ export async function GET(request: Request) {
         }),
         cache: "no-store",
         signal: AbortSignal.timeout(300_000),
-      }),
-    ]);
-    const graph = await graphResponse.json().catch(() => ({}));
+      },
+    );
     const entities = await entityResponse.json().catch(() => ({}));
+    const graphResponse = await fetch(
+      `${serverConfig.citationUrl}/api/local-graph`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          papers: corpus.papers ?? [],
+          edges: corpus.edges ?? [],
+          entity_graph: entityResponse.ok
+            ? {
+                nodes: entities.nodes ?? [],
+                edges: entities.edges ?? [],
+              }
+            : { nodes: [], edges: [] },
+        }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(60_000),
+      },
+    );
+    const graph = await graphResponse.json().catch(() => ({}));
     if (!graphResponse.ok) {
       return Response.json(graph, { status: graphResponse.status });
     }

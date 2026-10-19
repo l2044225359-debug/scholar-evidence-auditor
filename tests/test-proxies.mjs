@@ -263,6 +263,27 @@ for (const entityType of [
     throw new Error(`Paper entity graph is missing ${entityType} entities`);
   }
 }
+const expectedEntityNodes = [
+  "author",
+  "topic",
+  "method",
+  "dataset",
+  "metric",
+  "claim",
+].reduce((total, entityType) => total + entityCounts[entityType], 0);
+if (
+  localGraph.summary.entity_node_count !== expectedEntityNodes ||
+  localGraph.summary.total_node_count !==
+    localGraph.summary.paper_count + expectedEntityNodes ||
+  localGraph.summary.total_edge_count !==
+    localGraph.summary.edge_count + localGraph.summary.entity_relation_count ||
+  localGraph.heterogeneous_graph?.nodes?.length !==
+    localGraph.summary.total_node_count ||
+  localGraph.heterogeneous_graph?.edges?.length !==
+    localGraph.summary.total_edge_count
+) {
+  throw new Error("Heterogeneous NetworkX entity graph is inconsistent");
+}
 
 const filesResponse = await browserFetch("/api/files");
 if (filesResponse.status !== 200) {

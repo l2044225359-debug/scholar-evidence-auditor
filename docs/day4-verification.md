@@ -42,6 +42,9 @@
   7 Paper, 43 Author, 20 Topic, 18 Method, 10 Dataset, 6 Metric and 24 Claim.
   Entity results are persisted by content hash and recovered from disk in
   approximately 0.17 seconds after a service restart.
+- The NetworkX heterogeneous graph contains 128 total nodes and 135 total
+  edges: 7 paper nodes, 121 non-paper entity nodes, 2 citation edges and 133
+  entity relations. Paper PageRank remains isolated on the citation subgraph.
 - Future Work passages were extracted from 5 papers and synthesized by
   `qwen3.8-max` into a prioritized research agenda.
 - The WSL production build and TypeScript checks pass.

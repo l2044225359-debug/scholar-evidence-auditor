@@ -45,6 +45,10 @@
 - The NetworkX heterogeneous graph contains 128 total nodes and 135 total
   edges: 7 paper nodes, 121 non-paper entity nodes, 2 citation edges and 133
   entity relations. Paper PageRank remains isolated on the citation subgraph.
+- A real RAG/DPR comparison answer returned 95% evidence coverage with
+  5 page-grounded evidence items, 2/4 documents covered, 100% page grounding
+  and 100% citation alignment. The workspace displayed the result as
+  `证据充分`.
 - Future Work passages were extracted from 5 papers and synthesized by
   `qwen3.8-max` into a prioritized research agenda.
 - The WSL production build and TypeScript checks pass.

@@ -46,6 +46,22 @@ import styles from "./workspace.module.css";
 
 const numberFormatter = new Intl.NumberFormat("zh-CN");
 
+type EvidenceCoverage = {
+  score: number;
+  level: "sufficient" | "partial" | "insufficient";
+  summary_zh: string;
+  summary_en: string;
+  metrics: {
+    evidence_count: number;
+    covered_document_count: number;
+    scope_document_count: number;
+    page_grounded_count: number;
+    page_grounding_rate: number;
+    citation_alignment_rate: number;
+    numeric_match_rate: number;
+  };
+};
+
 function sizeLabel(size: number) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
@@ -154,6 +170,8 @@ export function Workspace() {
   );
   const [demoSeeded, setDemoSeeded] = useState(true);
   const [citations, setCitations] = useState<Citation[]>(demoCitations);
+  const [evidenceCoverage, setEvidenceCoverage] =
+    useState<EvidenceCoverage>();
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -311,6 +329,7 @@ export function Workspace() {
     setDemoSeeded(false);
     setMessages([]);
     setCitations([]);
+    setEvidenceCoverage(undefined);
     setConversationId(undefined);
     setRouteInfo({});
     setTraceEvents([]);
@@ -336,6 +355,7 @@ export function Workspace() {
     setInput("");
     setError("");
     setCitations([]);
+    setEvidenceCoverage(undefined);
     setLoading(true);
     const requestStartedAt = Date.now();
 
@@ -429,6 +449,9 @@ export function Workspace() {
               ),
             );
             setCitations(data.citations ?? []);
+            if (data.evidence_coverage) {
+              setEvidenceCoverage(data.evidence_coverage);
+            }
             if (data.conversation_id) {
               setConversationId(data.conversation_id);
             }
@@ -564,6 +587,12 @@ export function Workspace() {
       );
       stopVoice();
     }
+  }
+
+  function coverageLevelLabel(level: EvidenceCoverage["level"]) {
+    if (level === "sufficient") return t("coverage.sufficient");
+    if (level === "partial") return t("coverage.partial");
+    return t("coverage.insufficient");
   }
 
   return (
@@ -734,6 +763,64 @@ export function Workspace() {
             </div>
           </div>
           {error ? <div className="error-banner">{error}</div> : null}
+          {evidenceCoverage ? (
+            <section
+              className={styles.coveragePanel}
+              data-level={evidenceCoverage.level}
+            >
+              <div className={styles.coverageHeader}>
+                <span>
+                  <Gauge size={14} />
+                  {t("coverage.title")}
+                </span>
+                <strong>{Math.round(evidenceCoverage.score)}%</strong>
+                <em>{coverageLevelLabel(evidenceCoverage.level)}</em>
+              </div>
+              <div className={styles.coverageTrack}>
+                <span
+                  style={{
+                    width: `${evidenceCoverage.score}%`,
+                  }}
+                />
+              </div>
+              <div className={styles.coverageMetrics}>
+                <span>
+                  <b>{evidenceCoverage.metrics.evidence_count}</b>
+                  {t("coverage.evidenceItems")}
+                </span>
+                <span>
+                  <b>
+                    {evidenceCoverage.metrics.covered_document_count}/
+                    {evidenceCoverage.metrics.scope_document_count}
+                  </b>
+                  {t("coverage.documentsCovered")}
+                </span>
+                <span>
+                  <b>
+                    {Math.round(
+                      evidenceCoverage.metrics.page_grounding_rate * 100,
+                    )}
+                    %
+                  </b>
+                  {t("coverage.pageGrounding")}
+                </span>
+                <span>
+                  <b>
+                    {Math.round(
+                      evidenceCoverage.metrics.citation_alignment_rate * 100,
+                    )}
+                    %
+                  </b>
+                  {t("coverage.citationAlignment")}
+                </span>
+              </div>
+              <p>
+                {locale === "zh"
+                  ? evidenceCoverage.summary_zh
+                  : evidenceCoverage.summary_en}
+              </p>
+            </section>
+          ) : null}
 
           <div className={styles.messageList} ref={listRef}>
             {!messages.length ? (

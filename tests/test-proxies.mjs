@@ -323,6 +323,13 @@ if (
 const events = await askAttention(attention.id);
 const done = events.find((event) => event.event === "done");
 if (!done?.data.answer) throw new Error("Frontend SSE is incomplete");
+if (
+  !Number.isFinite(done.data.evidence_coverage?.score) ||
+  !done.data.evidence_coverage?.level ||
+  !done.data.evidence_coverage?.metrics
+) {
+  throw new Error("Frontend SSE is missing evidence coverage");
+}
 const citation = done.data.citations?.find((item) => item.preview_url);
 if (!citation) throw new Error("No PDF preview URL was returned");
 

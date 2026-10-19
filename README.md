@@ -116,6 +116,10 @@ framework, verified References and BibTeX. See `docs/agent-tools.md`.
 Evidence audits extract claims, map page evidence, verify numbers and citation
 integrity, and generate JSON or printable reports. See `docs/evidence-audit.md`.
 
+Completed chat answers show a deterministic evidence-coverage score with
+page-grounding, citation-alignment and document-scope metrics. See
+`docs/evidence-coverage.md`.
+
 ## Verification
 
 ```powershell

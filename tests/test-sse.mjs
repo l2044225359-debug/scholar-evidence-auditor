@@ -106,5 +106,15 @@ if (!done.data.citations?.length) {
 if (!done.data.citations.some((citation) => citation.preview_url)) {
   throw new Error("RAG stream did not return a PDF preview URL");
 }
+const coverage = done.data.evidence_coverage;
+if (
+  !Number.isFinite(coverage?.score) ||
+  coverage.score < 0 ||
+  coverage.score > 100 ||
+  !["sufficient", "partial", "insufficient"].includes(coverage.level) ||
+  !coverage.metrics?.evidence_count
+) {
+  throw new Error("RAG stream did not return valid evidence coverage");
+}
 
 console.log("SSE and RAG smoke tests passed.");

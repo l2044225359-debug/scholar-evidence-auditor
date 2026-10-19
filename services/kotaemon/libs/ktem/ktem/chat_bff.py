@@ -237,6 +237,104 @@ def _extract_numbers(value: str) -> list[str]:
     return [match.replace(",", "") for match in matches]
 
 
+def _evidence_coverage(
+    answer: str,
+    citations: list[dict],
+    scope_document_count: int,
+) -> dict:
+    evidence_count = len(citations)
+    documents = {
+        str(item.get("file_name") or "")
+        for item in citations
+        if item.get("file_name")
+    }
+    pages = {
+        (str(item.get("file_name") or ""), item.get("page"))
+        for item in citations
+        if item.get("file_name") and item.get("page") is not None
+    }
+    marker_values = []
+    for left, right in re.findall(r"【(\d+)】|\[(\d+)\]", answer or ""):
+        marker = left or right
+        if marker.isdigit():
+            marker_values.append(int(marker))
+    markers = set(marker_values)
+    page_ratio = len(pages) / evidence_count if evidence_count else 0
+    citation_alignment = (
+        min(1.0, evidence_count / len(markers))
+        if markers
+        else (0.65 if evidence_count else 0)
+    )
+    scope_target = max(1, min(scope_document_count, 3))
+    scope_ratio = min(1.0, len(documents) / scope_target) if evidence_count else 0
+    evidence_volume = min(1.0, evidence_count / 3)
+    evidence_text = " ".join(
+        str(item.get("snippet") or "") for item in citations
+    )
+    answer_numbers = _extract_numbers(answer)
+    normalized_evidence = evidence_text.replace(",", "")
+    numeric_ratio = (
+        sum(number in normalized_evidence for number in answer_numbers)
+        / len(answer_numbers)
+        if answer_numbers
+        else 1.0
+    )
+    score = round(
+        30 * evidence_volume
+        + 25 * page_ratio
+        + 20 * citation_alignment
+        + 15 * scope_ratio
+        + 10 * numeric_ratio
+    )
+    if score >= 80 and page_ratio >= 0.75 and evidence_count >= 2:
+        level = "sufficient"
+        summary_zh = (
+            f"检索到 {evidence_count} 条页码证据，覆盖 {len(documents)} 个文档。"
+            "证据数量、页码锚定与引用映射足以支持当前回答。"
+        )
+        summary_en = (
+            f"Retrieved {evidence_count} page-grounded evidence items across "
+            f"{len(documents)} document(s). Evidence volume, page anchoring "
+            "and citation alignment are sufficient for this answer."
+        )
+    elif score >= 50 and evidence_count:
+        level = "partial"
+        summary_zh = (
+            f"检索到 {evidence_count} 条证据，但页码覆盖或来源覆盖仍不完整。"
+            "当前知识库只能部分支持回答，建议核对证据或补充文档。"
+        )
+        summary_en = (
+            f"Retrieved {evidence_count} evidence item(s), but page or source "
+            "coverage is incomplete. The current knowledge base only partially "
+            "supports the answer; verify evidence or add documents."
+        )
+    else:
+        level = "insufficient"
+        summary_zh = (
+            "当前检索结果缺少足够的页码证据或引用锚点，知识库不足以稳妥支持回答。"
+        )
+        summary_en = (
+            "The current retrieval result lacks sufficient page-grounded "
+            "evidence or citation anchors. The knowledge base is not enough "
+            "to support the answer reliably."
+        )
+    return {
+        "score": max(0, min(100, score)),
+        "level": level,
+        "summary_zh": summary_zh,
+        "summary_en": summary_en,
+        "metrics": {
+            "evidence_count": evidence_count,
+            "covered_document_count": len(documents),
+            "scope_document_count": scope_document_count,
+            "page_grounded_count": len(pages),
+            "page_grounding_rate": round(page_ratio, 4),
+            "citation_alignment_rate": round(citation_alignment, 4),
+            "numeric_match_rate": round(numeric_ratio, 4),
+        },
+    }
+
+
 def _llm_json(
     model: str,
     system_prompt: str,
@@ -3522,6 +3620,11 @@ def register_chat_bff(api, app) -> None:
                 ),
                 "rerank": os.getenv("OPENAI_RERANK_MODEL", "qwen3-rerank"),
             },
+            "evidence_coverage": _evidence_coverage(
+                final_text,
+                citations,
+                file_count,
+            ),
             "routing_reason": routing_reason,
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         }
@@ -3889,6 +3992,11 @@ def register_chat_bff(api, app) -> None:
                     "citation_count": len(citations),
                     "model": routed_model,
                     "routing_reason": routing_reason,
+                    "evidence_coverage": _evidence_coverage(
+                        final_text,
+                        citations,
+                        file_count,
+                    ),
                 }
                 if payload.include_citations_html:
                     done_payload["citations_html"] = final_refs

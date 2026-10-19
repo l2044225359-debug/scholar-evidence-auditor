@@ -431,6 +431,126 @@
   justify-content: flex-end;
 }
 
+.coveragePanel {
+  display: grid;
+  gap: 7px;
+  margin: 12px 20px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-left: 3px solid var(--accent);
+  background: var(--surface-muted);
+}
+
+.coverageHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.coverageHeader > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: auto;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.coverageHeader svg {
+  color: var(--accent);
+}
+
+.coverageHeader strong {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.coverageHeader em {
+  padding: 3px 6px;
+  border: 1px solid #9bb9b2;
+  background: var(--accent-soft);
+  color: var(--petrol-ink, #234f49);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.coverageTrack {
+  height: 3px;
+  overflow: hidden;
+  background: var(--surface-strong);
+}
+
+.coverageTrack span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.coverageMetrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.coverageMetrics span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.coverageMetrics b {
+  color: var(--text);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 9px;
+}
+
+.coveragePanel > p {
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.coveragePanel[data-level="partial"] {
+  border-left-color: var(--citation);
+}
+
+.coveragePanel[data-level="partial"] .coverageHeader em {
+  border-color: #d8bc86;
+  background: var(--citation-soft, #f3e8d6);
+  color: #6f4a12;
+}
+
+.coveragePanel[data-level="partial"] .coverageTrack span {
+  background: var(--citation);
+}
+
+.coveragePanel[data-level="insufficient"] {
+  border-left-color: var(--danger);
+}
+
+.coveragePanel[data-level="insufficient"] .coverageHeader em {
+  border-color: #d7a59d;
+  background: var(--rubric-soft);
+  color: var(--danger);
+}
+
+.coveragePanel[data-level="insufficient"] .coverageTrack span {
+  background: var(--danger);
+}
+
 .messageList {
   flex: 1;
   min-height: 0;
@@ -965,6 +1085,10 @@
 
   .toolbarTags {
     display: none;
+  }
+
+  .coveragePanel {
+    margin: 10px 14px 0;
   }
 
   .messageList,

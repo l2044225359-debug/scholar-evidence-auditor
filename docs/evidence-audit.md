@@ -28,6 +28,7 @@ Every audit stores:
 - citation integrity rate
 - models used
 - generated time
+- evidence coverage score and level
 
 Reports are available as JSON through `/api/audits/{id}` and as printable HTML
 through `/api/audits/{id}/report`.

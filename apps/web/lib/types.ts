@@ -12,6 +12,24 @@ export type SourceFile = {
 export type Citation = {
   file_name: string;
   page: number | null;
+  evidence_type?: "text" | "table" | "formula" | "figure" | "image";
+  bbox?: [number, number, number, number] | null;
+  bbox_format?: string | null;
+  caption?: string;
+  structured_evidence?: {
+    schema_version: string;
+    kind: string;
+    page: number;
+    bbox: [number, number, number, number] | null;
+    bbox_format: string;
+    page_size: {
+      width: number;
+      height: number;
+    };
+    content: string;
+    caption: string;
+    source: string;
+  } | null;
   snippet: string;
   scores: Record<string, number>;
   preview_url: string | null;
@@ -37,6 +55,11 @@ export type KnowledgeOverview = {
   chunks: number;
   ocr_pages: number;
   citation_edges: number;
+  structured_evidence?: {
+    tables: number;
+    formulas: number;
+    figures: number;
+  };
   generated_at: string;
   health: {
     score: number;

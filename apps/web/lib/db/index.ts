@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { databaseFile, schemaFile } from "@/lib/runtime-paths";
+
 export type UserRole = "admin" | "user";
 
 export type UserRow = {
@@ -32,26 +34,19 @@ const globalDatabase = globalThis as typeof globalThis & {
   __scholarDb?: DatabaseSync;
 };
 
-function databasePath() {
-  if (process.env.DEMO_DB_PATH) {
-    return path.resolve(process.env.DEMO_DB_PATH);
-  }
-  return path.resolve(process.cwd(), "../../data/demo.sqlite");
-}
-
 export function getDb(): DatabaseSync {
   if (globalDatabase.__scholarDb) {
     return globalDatabase.__scholarDb;
   }
 
-  const dbPath = databasePath();
+  const dbPath = databaseFile();
   mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec("PRAGMA busy_timeout = 5000;");
 
-  const schemaPath = path.join(process.cwd(), "lib/db/schema.sql");
+  const schemaPath = schemaFile();
   if (!existsSync(schemaPath)) {
     throw new Error(`Database schema not found: ${schemaPath}`);
   }

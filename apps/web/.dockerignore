@@ -1,0 +1,9 @@
+.git
+.next
+node_modules
+*.log
+*.pid
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local

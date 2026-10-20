@@ -26,6 +26,11 @@ export type AgentTraceEvent = {
   title_zh?: string;
   detail?: string;
   status: "running" | "success" | "error" | "info";
+  phase?: "plan" | "call" | "observe" | "replan" | "complete";
+  iteration?: number;
+  tool?: string;
+  arguments?: Record<string, unknown>;
+  resultPreview?: string;
   durationMs?: number;
   createdAt?: number;
 };
@@ -519,6 +524,11 @@ export function AgentPanel({
                   {event.detail ? <p>{event.detail}</p> : null}
                   <div className={styles.traceMeta}>
                     <span>{event.kind}</span>
+                    {event.phase ? <span>{event.phase}</span> : null}
+                    {event.iteration ? (
+                      <span>step {event.iteration}</span>
+                    ) : null}
+                    {event.tool ? <span>{event.tool}</span> : null}
                     {event.durationMs ? (
                       <span>{event.durationMs} ms</span>
                     ) : null}

@@ -1,0 +1,21 @@
+name: compose-validate
+
+on:
+  pull_request:
+  push:
+    paths:
+      - ".env.example"
+      - "compose.yaml"
+      - "apps/web/Dockerfile"
+      - "services/*/Dockerfile*"
+      - ".github/workflows/compose-validate.yml"
+
+jobs:
+  config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate default stack
+        run: docker compose --env-file .env.example config --quiet
+      - name: Validate voice profile
+        run: docker compose --env-file .env.example --profile voice config --quiet

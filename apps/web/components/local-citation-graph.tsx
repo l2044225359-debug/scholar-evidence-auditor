@@ -1,25 +1,39 @@
 "use client";
 
 import {
+  Box,
   Crown,
   Database,
   FileText,
   Gauge,
   Loader2,
+  Maximize2,
   Network,
   Quote,
   RefreshCw,
+  Rotate3D,
   Tag,
   Telescope,
   Users,
   Wrench,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 
 import type { MessageKey } from "@/lib/i18n";
 
 import { useLanguage } from "./language-provider";
 import styles from "./local-citation-graph.module.css";
+
+const LocalGraph3D = dynamic(() => import("./local-graph-3d"), {
+  ssr: false,
+  loading: () => (
+    <div className={styles.graph3dLoading}>
+      <Loader2 className="spin" size={20} />
+      <span>Loading 3D graph…</span>
+    </div>
+  ),
+});
 
 type LocalNode = {
   id: string;
@@ -171,6 +185,13 @@ export function LocalCitationGraph() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedId, setSelectedId] = useState<string>();
+  const [selectedEntityId, setSelectedEntityId] = useState<string>();
+  const [viewMode, setViewMode] = useState<"2d" | "3d">("2d");
+  const [visibleTypes, setVisibleTypes] = useState<Set<EntityType>>(
+    () => new Set(entityTypes),
+  );
+  const [autoRotate, setAutoRotate] = useState(true);
+  const [fitVersion, setFitVersion] = useState(0);
 
   async function load(force = false) {
     setLoading(true);
@@ -191,6 +212,8 @@ export function LocalCitationGraph() {
       }
       setPayload(body);
       setSelectedId((current) => current ?? body.nodes?.[0]?.id);
+      setSelectedEntityId(undefined);
+      setVisibleTypes(new Set(entityTypes));
     } catch (reason) {
       setError(
         reason instanceof Error
@@ -225,14 +248,22 @@ export function LocalCitationGraph() {
   }, [payload]);
 
   const selected = payload?.nodes.find((node) => node.id === selectedId);
-  const selectedEntityId = selectedId ? `paper:${selectedId}` : "";
+  const selectedPaperEntityId = selectedId ? `paper:${selectedId}` : "";
+  const selectedEntity = payload?.entities?.nodes.find(
+    (node) =>
+      node.type !== "paper" &&
+      node.id === (selectedEntityId ?? selectedPaperEntityId),
+  );
+  const SelectedEntityIcon = selectedEntity
+    ? entityIcons[selectedEntity.type]
+    : null;
   const selectedEntityGroups = useMemo(() => {
     const entities = payload?.entities;
-    if (!entities || !selectedEntityId) return [];
+    if (!entities || !selectedPaperEntityId) return [];
     const nodes = new Map(entities.nodes.map((node) => [node.id, node]));
     const groups = new Map<EntityType, EntityNode[]>();
     for (const edge of entities.edges) {
-      if (edge.source !== selectedEntityId) continue;
+      if (edge.source !== selectedPaperEntityId) continue;
       const node = nodes.get(edge.target);
       if (!node) continue;
       const current = groups.get(node.type) ?? [];
@@ -246,6 +277,29 @@ export function LocalCitationGraph() {
         nodes: groups.get(type) ?? [],
       }))
       .filter((group) => group.nodes.length);
+  }, [payload, selectedPaperEntityId]);
+  const selectedEntityRelations = useMemo(() => {
+    if (!payload?.entities || !selectedEntityId) return [];
+    const papersById = new Map(
+      payload.nodes.map((paper) => [paper.id, paper]),
+    );
+    return payload.entities.edges
+      .filter(
+        (edge) =>
+          edge.source === selectedEntityId ||
+          edge.target === selectedEntityId,
+      )
+      .map((edge) => {
+        const paperNodeId =
+          edge.source === selectedEntityId ? edge.target : edge.source;
+        const paperId = paperNodeId.replace(/^paper:/, "");
+        return {
+          ...edge,
+          paperId,
+          paper: papersById.get(paperId),
+        };
+      })
+      .filter((edge) => edge.paper);
   }, [payload, selectedEntityId]);
   const relatedIds = useMemo(() => {
     if (!payload || !selectedId) return new Set<string>();
@@ -260,6 +314,26 @@ export function LocalCitationGraph() {
     0.000001,
     ...(payload?.nodes.map((node) => node.pagerank) ?? []),
   );
+
+  function selectPaper(paperId: string) {
+    setSelectedId(paperId);
+    setSelectedEntityId(undefined);
+  }
+
+  function selectEntity(entityId: string, paperId?: string) {
+    setSelectedEntityId(entityId);
+    if (paperId) setSelectedId(paperId);
+  }
+
+  function toggleType(type: EntityType) {
+    if (type === "paper") return;
+    setVisibleTypes((current) => {
+      const next = new Set(current);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }
 
   if (loading) {
     return (
@@ -365,12 +439,97 @@ export function LocalCitationGraph() {
 
       <div className={styles.workspace}>
         <section className={styles.graphPanel}>
-          <svg
-            className={styles.graph}
-            viewBox={`0 0 ${layout.width} ${layout.height}`}
-            role="img"
-            aria-label={t("localGraph.title")}
-          >
+          <div className={styles.graphToolbar}>
+            <div className={styles.viewSwitch} role="group">
+              <button
+                type="button"
+                className={viewMode === "2d" ? styles.viewActive : ""}
+                onClick={() => setViewMode("2d")}
+                aria-pressed={viewMode === "2d"}
+              >
+                <Network size={12} />
+                {t("localGraph.view2d")}
+              </button>
+              <button
+                type="button"
+                className={viewMode === "3d" ? styles.viewActive : ""}
+                onClick={() => {
+                  setViewMode("3d");
+                  setFitVersion((current) => current + 1);
+                }}
+                aria-pressed={viewMode === "3d"}
+                disabled={!payload.entities}
+              >
+                <Box size={12} />
+                {t("localGraph.view3d")}
+              </button>
+            </div>
+            {viewMode === "3d" ? (
+              <div className={styles.graphActions}>
+                <button
+                  type="button"
+                  className={autoRotate ? styles.actionActive : ""}
+                  onClick={() => setAutoRotate((current) => !current)}
+                  aria-pressed={autoRotate}
+                  title={t("localGraph.autoRotate")}
+                >
+                  <Rotate3D size={13} />
+                  <span>{t("localGraph.rotate")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFitVersion((current) => current + 1)}
+                  title={t("localGraph.fitView")}
+                >
+                  <Maximize2 size={13} />
+                  <span>{t("localGraph.fit")}</span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+          {viewMode === "3d" && payload.entities ? (
+            <div className={styles.graphFilters}>
+              <span>{t("localGraph.filters")}</span>
+              {entityTypes.map((type) => {
+                const Icon = entityIcons[type];
+                const active = visibleTypes.has(type);
+                return (
+                  <button
+                    type="button"
+                    key={type}
+                    className={active ? styles.filterActive : ""}
+                    onClick={() => toggleType(type)}
+                    disabled={type === "paper"}
+                    aria-pressed={active}
+                  >
+                    <Icon size={11} />
+                    {t(entityLabelKeys[type])}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          {viewMode === "3d" && payload.entities ? (
+            <LocalGraph3D
+              papers={payload.nodes}
+              citationEdges={payload.edges}
+              entityNodes={payload.entities.nodes}
+              entityEdges={payload.entities.edges}
+              selectedPaperId={selectedId}
+              selectedEntityId={selectedEntityId}
+              visibleTypes={visibleTypes}
+              autoRotate={autoRotate}
+              fitVersion={fitVersion}
+              onSelectPaper={selectPaper}
+              onSelectEntity={selectEntity}
+            />
+          ) : (
+            <svg
+              className={styles.graph}
+              viewBox={`0 0 ${layout.width} ${layout.height}`}
+              role="img"
+              aria-label={t("localGraph.title")}
+            >
             <defs>
               <marker
                 id="citation-arrow"
@@ -413,7 +572,7 @@ export function LocalCitationGraph() {
                   className={active ? styles.nodeActive : styles.node}
                   key={node.id}
                   transform={`translate(${position.x},${position.y})`}
-                  onClick={() => setSelectedId(node.id)}
+                  onClick={() => selectPaper(node.id)}
                   role="button"
                   tabIndex={0}
                 >
@@ -424,7 +583,23 @@ export function LocalCitationGraph() {
                 </g>
               );
             })}
-          </svg>
+            </svg>
+          )}
+          {viewMode === "3d" ? (
+            <div className={styles.graphHud}>
+              <span>{payload.summary.total_node_count ?? 0} nodes</span>
+              <span>{payload.summary.total_edge_count ?? 0} relations</span>
+              <strong>
+                {selectedEntity
+                  ? `${t(entityLabelKeys[selectedEntity.type])} · ${
+                      selectedEntity.label
+                    }`
+                  : selected
+                    ? shortTitle(selected.title, 42)
+                    : "GraphRAG"}
+              </strong>
+            </div>
+          ) : null}
         </section>
 
         <aside className={styles.side}>
@@ -439,7 +614,7 @@ export function LocalCitationGraph() {
                   type="button"
                   className={node.id === selectedId ? styles.rankActive : ""}
                   key={node.id}
-                  onClick={() => setSelectedId(node.id)}
+                  onClick={() => selectPaper(node.id)}
                 >
                   <span>{String(index + 1).padStart(2, "0")}</span>
                   <div>
@@ -453,6 +628,38 @@ export function LocalCitationGraph() {
               ))}
             </div>
           </section>
+
+          {selectedEntity ? (
+            <section className={styles.panel}>
+              <div className={styles.panelTitle}>
+                {SelectedEntityIcon ? <SelectedEntityIcon size={14} /> : null}
+                {t("localGraph.selectedEntity")}
+              </div>
+              <h3>{selectedEntity.label}</h3>
+              <p className={styles.meta}>
+                {t(entityLabelKeys[selectedEntity.type])}
+                {selectedEntityRelations.length
+                  ? ` · ${selectedEntityRelations.length} ${t("localGraph.relatedPapers")}`
+                  : ""}
+              </p>
+              <div className={styles.entityEvidenceList}>
+                {selectedEntityRelations.map((relation) => (
+                  <button
+                    type="button"
+                    key={`${relation.source}-${relation.target}-${relation.relation}`}
+                    onClick={() => {
+                      selectPaper(relation.paperId);
+                      setSelectedEntityId(selectedEntity.id);
+                    }}
+                  >
+                    <strong>{relation.paper?.title}</strong>
+                    <span>{relation.relation}</span>
+                    <small>{relation.evidence}</small>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           {selected ? (
             <section className={styles.panel}>

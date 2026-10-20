@@ -25,10 +25,10 @@ CROSSREF_BASE = os.getenv("CROSSREF_BASE_URL", "https://api.crossref.org")
 OPENALEX_MAILTO = os.getenv("OPENALEX_MAILTO", "").strip()
 CROSSREF_MAILTO = os.getenv("CROSSREF_MAILTO", "").strip()
 CACHE_DIR = Path(
-    os.getenv("CITATION_CACHE_DIR", "/home/lh/race/citation_graph/cache")
+    os.getenv("CITATION_CACHE_DIR", str(Path.cwd() / "cache"))
 )
 EXPORT_DIR = Path(
-    os.getenv("CITATION_EXPORT_DIR", "/home/lh/race/citation_graph/exports")
+    os.getenv("CITATION_EXPORT_DIR", str(Path.cwd() / "exports"))
 )
 CACHE_TTL = int(os.getenv("CITATION_CACHE_TTL", "86400"))
 HTTP_TIMEOUT = int(os.getenv("CITATION_HTTP_TIMEOUT", "30"))

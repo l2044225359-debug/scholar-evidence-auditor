@@ -17,6 +17,7 @@ import {
   ScanText,
   Search,
   ShieldAlert,
+  Table2,
   Trash2,
   Upload,
   XCircle,
@@ -519,6 +520,26 @@ export function DocumentsView() {
                   {overview ? numberLabel(overview.citation_edges) : "—"}
                 </strong>
                 <small>{t("knowledge.citationEdgesHint")}</small>
+              </div>
+              <div className={styles.overviewMetric}>
+                <span className={styles.overviewLabel}>
+                  <Table2 size={14} />
+                  {t("knowledge.structuredEvidence")}
+                </span>
+                <strong>
+                  {overview?.structured_evidence
+                    ? numberLabel(
+                        overview.structured_evidence.tables +
+                          overview.structured_evidence.formulas +
+                          overview.structured_evidence.figures,
+                      )
+                    : "—"}
+                </strong>
+                <small>
+                  {overview?.structured_evidence
+                    ? `${overview.structured_evidence.tables} T · ${overview.structured_evidence.formulas} F · ${overview.structured_evidence.figures} Fig`
+                    : t("knowledge.structuredEvidenceHint")}
+                </small>
               </div>
               <div
                 className={styles.overviewMetric}

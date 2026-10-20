@@ -11,6 +11,12 @@ from kotaemon.base import Document, Param
 
 from .azureai_document_intelligence_loader import crop_image
 from .base import BaseReader
+from .structured_evidence import (
+    build_structured_evidence,
+    is_formula_label,
+    normalize_bbox,
+    page_size_from_legacy,
+)
 from .utils.adobe import generate_single_figure_caption, make_markdown_table
 
 
@@ -154,8 +160,6 @@ class DoclingReader(BaseReader):
         figures = []
         gen_caption_count = 0
         for figure_obj in result_dict.get("pictures", []):
-            if not self.vlm_endpoint:
-                continue
             if file_path.suffix.lower() not in self.figure_friendly_filetypes:
                 continue
 
@@ -171,39 +175,43 @@ class DoclingReader(BaseReader):
                     print(e)
                     continue
 
-            # read & crop image
-            page_number = figure_obj["prov"][0]["page_no"]
+            provenance = figure_obj.get("prov") or [{}]
+            page_number = int(provenance[0].get("page_no", 1))
+            page_size = page_size_from_legacy(
+                result_dict,
+                page_number,
+            )
 
             try:
-                page_number_text = str(page_number)
-                page_width = result_dict["pages"][page_number_text]["size"]["width"]
-                page_height = result_dict["pages"][page_number_text]["size"]["height"]
-
-                bbox_obj = figure_obj["prov"][0]["bbox"]
-                bbox: list[float] = [
-                    bbox_obj["l"],
-                    bbox_obj["t"],
-                    bbox_obj["r"],
-                    bbox_obj["b"],
-                ]
-                if bbox_obj["coord_origin"] == "BOTTOMLEFT":
-                    bbox = self._convert_bbox_bl_tl(bbox, page_width, page_height)
-
-                img = crop_image(file_path, bbox, page_number - 1)
-            except KeyError as e:
-                print(e, list(result_dict["pages"].keys()))
-                continue
-
-            # convert img to base64
-            img_bytes = BytesIO()
-            img.save(img_bytes, format="PNG")
-            img_base64 = base64.b64encode(img_bytes.getvalue()).decode("utf-8")
-            img_base64 = f"data:image/png;base64,{img_base64}"
+                bbox_obj = provenance[0].get("bbox")
+                normalized_bbox = normalize_bbox(
+                    bbox_obj,
+                    page_size,
+                    (bbox_obj or {}).get("coord_origin"),
+                )
+            except (KeyError, TypeError) as e:
+                print(e, list((result_dict.get("pages") or {}).keys()))
+                normalized_bbox = None
 
             # generate the generative caption
-            if gen_caption_count >= self.max_figure_to_caption:
-                gen_caption = ""
-            else:
+            gen_caption = ""
+            img_base64 = ""
+            if (
+                self.vlm_endpoint
+                and normalized_bbox
+                and gen_caption_count < self.max_figure_to_caption
+            ):
+                img = crop_image(
+                    file_path,
+                    normalized_bbox,
+                    page_number - 1,
+                )
+                img_bytes = BytesIO()
+                img.save(img_bytes, format="PNG")
+                img_base64 = base64.b64encode(img_bytes.getvalue()).decode(
+                    "utf-8"
+                )
+                img_base64 = f"data:image/png;base64,{img_base64}"
                 gen_caption_count += 1
                 gen_caption = generate_single_figure_caption(
                     figure=img_base64, vlm_endpoint=self.vlm_endpoint
@@ -211,15 +219,29 @@ class DoclingReader(BaseReader):
 
             # join the extractive and generative captions
             caption = "\n".join(extractive_captions + [gen_caption])
+            if not caption.strip() and not img_base64:
+                continue
 
             # store the image into document
             figure_metadata = {
-                "image_origin": img_base64,
                 "type": "image",
                 "page_label": page_number,
                 "file_name": file_name,
                 "file_path": file_path,
             }
+            if img_base64:
+                figure_metadata["image_origin"] = img_base64
+            figure_metadata.update(
+                build_structured_evidence(
+                    kind="figure",
+                    page=page_number,
+                    bbox=normalized_bbox,
+                    page_size=page_size,
+                    content=caption,
+                    caption="\n".join(extractive_captions),
+                    source=file_name,
+                )
+            )
             figure_metadata.update(metadata)
 
             figures.append(
@@ -249,7 +271,17 @@ class DoclingReader(BaseReader):
             caption = "\n".join(extractive_captions)
             markdown_table = f"{caption}\n{markdown_table}"
 
-            page_number = table_obj["prov"][0].get("page_no", 1)
+            provenance = table_obj.get("prov") or [{}]
+            page_number = int(provenance[0].get("page_no", 1))
+            page_size = page_size_from_legacy(
+                result_dict,
+                page_number,
+            )
+            normalized_bbox = normalize_bbox(
+                provenance[0].get("bbox"),
+                page_size,
+                (provenance[0].get("bbox") or {}).get("coord_origin"),
+            )
 
             table_metadata = {
                 "type": "table",
@@ -258,6 +290,17 @@ class DoclingReader(BaseReader):
                 "file_name": file_name,
                 "file_path": file_path,
             }
+            table_metadata.update(
+                build_structured_evidence(
+                    kind="table",
+                    page=page_number,
+                    bbox=normalized_bbox,
+                    page_size=page_size,
+                    content=markdown_table,
+                    caption=caption,
+                    source=file_name,
+                )
+            )
             table_metadata.update(metadata)
 
             tables.append(
@@ -269,11 +312,55 @@ class DoclingReader(BaseReader):
 
         # Join text by page and replace weak/scanned pages with Qwen-OCR.
         texts = []
+        formulas = []
         page_number_to_text = defaultdict(list)
 
         for text_obj in result_dict.get("texts", []):
             provenance = text_obj.get("prov") or [{}]
             page_number = provenance[0].get("page_no", 1)
+            if is_formula_label(text_obj.get("label")):
+                formula_text = str(
+                    text_obj.get("text") or text_obj.get("orig") or ""
+                ).strip()
+                if not formula_text:
+                    continue
+                page_number = int(page_number)
+                page_size = page_size_from_legacy(
+                    result_dict,
+                    page_number,
+                )
+                bbox_obj = provenance[0].get("bbox")
+                normalized_bbox = normalize_bbox(
+                    bbox_obj,
+                    page_size,
+                    (bbox_obj or {}).get("coord_origin"),
+                )
+                formula_metadata = {
+                    "type": "formula",
+                    "page_label": page_number,
+                    "formula_origin": formula_text,
+                    "latex": formula_text,
+                    "file_name": file_name,
+                    "file_path": file_path,
+                }
+                formula_metadata.update(
+                    build_structured_evidence(
+                        kind="formula",
+                        page=page_number,
+                        bbox=normalized_bbox,
+                        page_size=page_size,
+                        content=formula_text,
+                        source=file_name,
+                    )
+                )
+                formula_metadata.update(metadata)
+                formulas.append(
+                    Document(
+                        text=formula_text,
+                        metadata=formula_metadata,
+                    )
+                )
+                continue
             page_number_to_text[page_number].append(text_obj["text"])
 
         page_numbers = sorted(
@@ -315,7 +402,7 @@ class DoclingReader(BaseReader):
                 )
             )
 
-        return texts + tables + figures
+        return texts + formulas + tables + figures
 
     def _load_modern_result(
         self,
@@ -332,7 +419,9 @@ class DoclingReader(BaseReader):
         for text_item in getattr(output, "main_text", []) or []:
             page_number = self._modern_page_number(text_item)
             text = getattr(text_item, "text", "") or ""
-            if text.strip():
+            if text.strip() and not is_formula_label(
+                self._modern_label(text_item)
+            ):
                 page_number_to_text[page_number].append(text)
 
         page_numbers = sorted(
@@ -400,17 +489,35 @@ class DoclingReader(BaseReader):
             rendered_table = "\n".join(
                 part for part in (table_text.strip(), markdown_table) if part
             )
+            page_number = self._modern_page_number(table)
+            page_size = self._modern_page_size(result, output, page_number)
+            normalized_bbox = self._modern_bbox(
+                table,
+                page_size,
+            )
+            table_metadata = {
+                "type": "table",
+                "page_label": page_number,
+                "table_origin": markdown_table,
+                "file_name": file_name,
+                "file_path": file_path,
+            }
+            table_metadata.update(
+                build_structured_evidence(
+                    kind="table",
+                    page=page_number,
+                    bbox=normalized_bbox,
+                    page_size=page_size,
+                    content=rendered_table,
+                    caption=table_text,
+                    source=file_name,
+                )
+            )
+            table_metadata.update(metadata)
             tables.append(
                 Document(
                     text=rendered_table,
-                    metadata={
-                        "type": "table",
-                        "page_label": self._modern_page_number(table),
-                        "table_origin": markdown_table,
-                        "file_name": file_name,
-                        "file_path": file_path,
-                        **metadata,
-                    },
+                    metadata=table_metadata,
                 )
             )
 
@@ -419,21 +526,105 @@ class DoclingReader(BaseReader):
             figure_text = (getattr(figure, "text", "") or "").strip()
             if not figure_text:
                 continue
-
+            page_number = self._modern_page_number(figure)
+            page_size = self._modern_page_size(result, output, page_number)
+            normalized_bbox = self._modern_bbox(figure, page_size)
+            figure_metadata = {
+                "type": "image",
+                "page_label": page_number,
+                "file_name": file_name,
+                "file_path": file_path,
+            }
+            figure_metadata.update(
+                build_structured_evidence(
+                    kind="figure",
+                    page=page_number,
+                    bbox=normalized_bbox,
+                    page_size=page_size,
+                    content=figure_text,
+                    caption=figure_text,
+                    source=file_name,
+                )
+            )
+            figure_metadata.update(metadata)
             figures.append(
                 Document(
                     text=figure_text,
-                    metadata={
-                        "type": "image",
-                        "page_label": self._modern_page_number(figure),
-                        "file_name": file_name,
-                        "file_path": file_path,
-                        **metadata,
-                    },
+                    metadata=figure_metadata,
                 )
             )
 
-        return texts + tables + figures
+        formulas = []
+        seen_formula_ids = set()
+        seen_formula_signatures = set()
+        formula_candidates = [
+            (formula, True)
+            for attribute in ("formulas", "equations")
+            for formula in (getattr(output, attribute, []) or [])
+        ]
+        formula_candidates.extend(
+            (formula, False)
+            for formula in (getattr(output, "texts", []) or [])
+        )
+        for formula, explicit_formula in formula_candidates:
+            if not explicit_formula and not is_formula_label(
+                self._modern_label(formula)
+            ):
+                continue
+            formula_id = str(getattr(formula, "id", "") or "")
+            if formula_id and formula_id in seen_formula_ids:
+                continue
+            if formula_id:
+                seen_formula_ids.add(formula_id)
+            formula_text = str(
+                getattr(formula, "text", "")
+                or getattr(formula, "orig", "")
+                or ""
+            ).strip()
+            if not formula_text:
+                continue
+            page_number = self._modern_page_number(formula)
+            page_size = self._modern_page_size(
+                result,
+                output,
+                page_number,
+            )
+            normalized_bbox = self._modern_bbox(formula, page_size)
+            signature = (
+                page_number,
+                formula_text,
+                tuple(normalized_bbox or []),
+            )
+            if signature in seen_formula_signatures:
+                continue
+            seen_formula_signatures.add(signature)
+            formula_metadata = {
+                "type": "formula",
+                "page_label": page_number,
+                "formula_origin": formula_text,
+                "latex": formula_text,
+                "file_name": file_name,
+                "file_path": file_path,
+            }
+            formula_metadata.update(
+                build_structured_evidence(
+                    kind="formula",
+                    page=page_number,
+                    bbox=normalized_bbox,
+                    page_size=page_size,
+                    content=formula_text,
+                    source=file_name,
+                )
+            )
+            formula_metadata.update(metadata)
+            formulas.append(
+                Document(
+                    text=formula_text,
+                    metadata=formula_metadata,
+                )
+            )
+
+        return texts + formulas + tables + figures
 
     def _modern_page_numbers(self, result, output) -> List[int]:
         page_numbers = []
@@ -469,6 +660,66 @@ class DoclingReader(BaseReader):
                 first, "page_no", 1
             )
         return int(page_number)
+
+    def _modern_label(self, item) -> str:
+        label = self._modern_field(item, "label", "")
+        return str(getattr(label, "value", label) or "")
+
+    def _modern_field(self, source, key: str, default=None):
+        if isinstance(source, dict):
+            return source.get(key, default)
+        return getattr(source, key, default)
+
+    def _modern_page_size(
+        self,
+        result,
+        output,
+        page_number: int,
+    ) -> dict[str, float]:
+        for index, page in enumerate(
+            getattr(output, "page_dimensions", []) or []
+        ):
+            candidate_page = self._modern_field(page, "page")
+            if candidate_page is None:
+                candidate_page = index + 1
+            if int(candidate_page) != int(page_number):
+                continue
+            size = self._modern_field(page, "size")
+            width = self._modern_field(size, "width")
+            height = self._modern_field(size, "height")
+            if width is not None and height is not None:
+                return {
+                    "width": float(width),
+                    "height": float(height),
+                }
+
+        for page in getattr(result, "pages", []) or []:
+            candidate_page = self._modern_field(page, "page_no")
+            if candidate_page is None or int(candidate_page) != int(
+                page_number
+            ):
+                continue
+            size = self._modern_field(page, "size")
+            width = self._modern_field(size, "width")
+            height = self._modern_field(size, "height")
+            if width is not None and height is not None:
+                return {
+                    "width": float(width),
+                    "height": float(height),
+                }
+        return {"width": 0.0, "height": 0.0}
+
+    def _modern_bbox(
+        self,
+        item,
+        page_size: dict[str, float],
+    ) -> list[float] | None:
+        provenance = getattr(item, "prov", None) or []
+        if not provenance:
+            return None
+        first = provenance[0]
+        bbox = self._modern_field(first, "bbox")
+        return normalize_bbox(bbox, page_size)
 
     def _needs_ocr(self, page_text: str) -> bool:
         return len(page_text.strip()) < self.min_text_chars_per_page

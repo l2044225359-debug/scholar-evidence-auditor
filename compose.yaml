@@ -1,0 +1,241 @@
+name: ${COMPOSE_PROJECT_NAME:-scholar}
+
+x-web-environment: &web-environment
+  NODE_ENV: production
+  AUTH_SECRET: ${AUTH_SECRET:?set AUTH_SECRET in .env}
+  AUTH_TRUST_HOST: "true"
+  DEMO_DATA_DIR: /data
+  DEMO_DB_PATH: /data/demo.sqlite
+  DEMO_UPLOAD_DIR: /data/uploads
+  DEMO_CREDENTIALS_PATH: /data/demo-accounts.json
+  DEMO_SCHEMA_PATH: /app/lib/db/schema.sql
+  WORKER_LOCK_PATH: /data/index-worker.lock
+  KOTAEMON_BFF_URL: http://kotaemon:7860
+  CITATION_GRAPH_URL: http://citation-graph:8001
+  VIBEVOICE_URL: ${VIBEVOICE_URL:-http://vibevoice:8002}
+  CHAT_BFF_TOKEN: ${CHAT_BFF_TOKEN:?set CHAT_BFF_TOKEN in .env}
+  EVALUATION_RESULTS_PATH: /app/evaluation/results.json
+  NEXT_TELEMETRY_DISABLED: "1"
+
+x-kotaemon-environment: &kotaemon-environment
+  GRADIO_SERVER_NAME: 0.0.0.0
+  GRADIO_SERVER_PORT: "7860"
+  GRADIO_TEMP_DIR: /app/ktem_app_data/gradio_tmp
+  KH_GRADIO_SHARE: "false"
+  KH_ENABLE_FIRST_SETUP: "false"
+  KH_FEATURE_USER_MANAGEMENT: "true"
+  KH_FEATURE_USER_MANAGEMENT_ADMIN: ${KOTAEMON_ADMIN_USERNAME:-admin}
+  KH_FEATURE_USER_MANAGEMENT_PASSWORD: ${KOTAEMON_ADMIN_PASSWORD:?set KOTAEMON_ADMIN_PASSWORD in .env}
+  KH_PDF_READER_MODE: docling
+  KH_RETRIEVAL_MODE: ${KH_RETRIEVAL_MODE:-hybrid}
+  DOCLING_ARTIFACTS_PATH: /app/ktem_app_data/docling_artifacts
+  HF_HOME: /app/ktem_app_data/huggingface
+  HF_HUB_CACHE: /app/ktem_app_data/huggingface
+  OPENAI_API_BASE: ${OPENAI_API_BASE:?set OPENAI_API_BASE in .env}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:?set OPENAI_API_KEY in .env}
+  OPENAI_CHAT_MODEL: ${OPENAI_CHAT_MODEL:-qwen3.8-flash}
+  OPENAI_COMPLEX_MODEL: ${OPENAI_COMPLEX_MODEL:-qwen3.8-max}
+  OPENAI_EMBEDDINGS_MODEL: ${OPENAI_EMBEDDINGS_MODEL:-qwen3.7-text-embedding}
+  OPENAI_RERANK_MODEL: ${OPENAI_RERANK_MODEL:-qwen3-rerank}
+  OPENAI_OCR_MODEL: ${OPENAI_OCR_MODEL:-qwen3.5-ocr}
+  OPENAI_CHAT_MAX_TOKENS: ${OPENAI_CHAT_MAX_TOKENS:-1000}
+  CHAT_BFF_TOKEN: ${CHAT_BFF_TOKEN:?set CHAT_BFF_TOKEN in .env}
+  AGENT_PLANNER_MODEL: ${AGENT_PLANNER_MODEL:-qwen3.8-flash}
+  AGENT_PLANNER_MAX_STEPS: ${AGENT_PLANNER_MAX_STEPS:-4}
+  AGENT_PLANNER_TIMEOUT: ${AGENT_PLANNER_TIMEOUT:-90}
+  GRAPHRAG_ENABLED: ${GRAPHRAG_ENABLED:-true}
+  GRAPHRAG_TOP_K: ${GRAPHRAG_TOP_K:-8}
+  GRAPHRAG_MAX_HOPS: ${GRAPHRAG_MAX_HOPS:-2}
+  TOKENIZERS_PARALLELISM: "false"
+
+services:
+  init:
+    image: ${WEB_IMAGE:-scholar-web:local}
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    command: ["node", "scripts/init-demo.mjs"]
+    environment: *web-environment
+    user: "${SCHOLAR_UID:-1000}:${SCHOLAR_GID:-1000}"
+    volumes:
+      - "${SCHOLAR_DATA_VOLUME:-scholar-data}:/data"
+    init: true
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+
+  kotaemon:
+    image: ${KOTAEMON_IMAGE:-scholar-kotaemon:local}
+    build:
+      context: ./services/kotaemon
+      dockerfile: Dockerfile.compose
+    environment: *kotaemon-environment
+    volumes:
+      - "${KOTAEMON_DATA_VOLUME:-kotaemon-data}:/app/ktem_app_data"
+    ports:
+      - "${LOCAL_BIND_HOST:-127.0.0.1}:${KOTAEMON_PORT:-7860}:7860"
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 45s
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:7860/api/bff/health >/dev/null",
+        ]
+      interval: 20s
+      timeout: 8s
+      retries: 12
+      start_period: 300s
+    security_opt:
+      - no-new-privileges:true
+
+  citation-graph:
+    image: ${CITATION_GRAPH_IMAGE:-scholar-citation-graph:local}
+    build:
+      context: ./services/citation-graph
+      dockerfile: Dockerfile
+    environment:
+      CITATION_HOST: 0.0.0.0
+      CITATION_PORT: "8001"
+      CITATION_CACHE_DIR: /data/cache
+      CITATION_EXPORT_DIR: /data/exports
+      CITATION_CACHE_TTL: ${CITATION_CACHE_TTL:-86400}
+      CITATION_HTTP_TIMEOUT: ${CITATION_HTTP_TIMEOUT:-30}
+      OPENALEX_BASE_URL: ${OPENALEX_BASE_URL:-https://api.openalex.org}
+      CROSSREF_BASE_URL: ${CROSSREF_BASE_URL:-https://api.crossref.org}
+      OPENALEX_MAILTO: ${OPENALEX_MAILTO:-}
+      CROSSREF_MAILTO: ${CROSSREF_MAILTO:-}
+    volumes:
+      - "${CITATION_CACHE_VOLUME:-citation-cache}:/data/cache"
+      - "${CITATION_EXPORT_VOLUME:-citation-exports}:/data/exports"
+    ports:
+      - "${LOCAL_BIND_HOST:-127.0.0.1}:${CITATION_GRAPH_PORT:-8001}:8001"
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/api/health', timeout=5)\"",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 8
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+
+  web:
+    image: ${WEB_IMAGE:-scholar-web:local}
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    environment: *web-environment
+    user: "${SCHOLAR_UID:-1000}:${SCHOLAR_GID:-1000}"
+    volumes:
+      - "${SCHOLAR_DATA_VOLUME:-scholar-data}:/data"
+      - "./tests/evaluation:/app/evaluation:ro"
+    ports:
+      - "${BIND_HOST:-0.0.0.0}:${WEB_PORT:-3000}:3000"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      kotaemon:
+        condition: service_healthy
+      citation-graph:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 8s
+      retries: 10
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+  index-worker:
+    image: ${WEB_IMAGE:-scholar-web:local}
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    command: ["node", "scripts/index-worker.mjs"]
+    environment: *web-environment
+    user: "${SCHOLAR_UID:-1000}:${SCHOLAR_GID:-1000}"
+    volumes:
+      - "${SCHOLAR_DATA_VOLUME:-scholar-data}:/data"
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      kotaemon:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  vibevoice:
+    profiles: ["voice"]
+    image: ${VIBEVOICE_IMAGE:-scholar-vibevoice:local}
+    build:
+      context: ./services/vibevoice
+      dockerfile: Dockerfile
+      args:
+        VIBEVOICE_BASE_IMAGE: ${VIBEVOICE_BASE_IMAGE:-pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime}
+        VIBEVOICE_REPOSITORY: ${VIBEVOICE_REPOSITORY:-https://github.com/microsoft/VibeVoice.git}
+        VIBEVOICE_REF: ${VIBEVOICE_REF:-main}
+    environment:
+      VIBEVOICE_HOST: 0.0.0.0
+      VIBEVOICE_PORT: "8002"
+      VIBEVOICE_DEVICE: ${VIBEVOICE_DEVICE:-cuda}
+      VIBEVOICE_MODEL_PATH: ${VIBEVOICE_MODEL_PATH:-microsoft/VibeVoice-Realtime-0.5B}
+      VIBEVOICE_VOICES_DIR: /opt/vibevoice/demo/voices/streaming_model
+      VIBEVOICE_OUTPUT_DIR: /data/outputs
+      VIBEVOICE_WARMUP: ${VIBEVOICE_WARMUP:-1}
+      HF_HOME: /models/huggingface
+    volumes:
+      - "${VIBEVOICE_MODEL_VOLUME:-vibevoice-models}:/models"
+      - "${VIBEVOICE_OUTPUT_VOLUME:-vibevoice-outputs}:/data/outputs"
+    ports:
+      - "${LOCAL_BIND_HOST:-127.0.0.1}:${VIBEVOICE_PORT:-8002}:8002"
+    shm_size: "2gb"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "curl -fsS http://127.0.0.1:8002/health | grep -q '\"ready\":true'",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 20
+      start_period: 300s
+    restart: unless-stopped
+
+volumes:
+  scholar-data:
+    name: ${SCHOLAR_DATA_VOLUME_NAME:-scholar-data}
+  kotaemon-data:
+    name: ${KOTAEMON_DATA_VOLUME_NAME:-kotaemon-data}
+  citation-cache:
+    name: ${CITATION_CACHE_VOLUME_NAME:-citation-cache}
+  citation-exports:
+    name: ${CITATION_EXPORT_VOLUME_NAME:-citation-exports}
+  vibevoice-models:
+    name: ${VIBEVOICE_MODEL_VOLUME_NAME:-vibevoice-models}
+  vibevoice-outputs:
+    name: ${VIBEVOICE_OUTPUT_VOLUME_NAME:-vibevoice-outputs}

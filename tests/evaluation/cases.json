@@ -28,5 +28,15 @@
   {"id":"C27","kind":"chat","category":"ocr","question":"扫描件第 1 页的论文标题是什么？","fileNames":["attention_scan_batch20.pdf"],"expectedKeywordGroups":[["Attention Is All You Need"]],"expectedNumbers":[]},
   {"id":"C28","kind":"audit","category":"ocr","question":"核验扫描件第 1 页的模型名称和两个 BLEU 分数。","fileNames":["attention_scan_batch20.pdf"],"expectedKeywordGroups":[["Transformer"]],"expectedNumbers":["28.4","41.8"]},
   {"id":"C29","kind":"chat","category":"refusal","question":"论文中报告的 ImageNet 准确率是多少？","fileNames":["attention.pdf"],"expectedKeywords":[],"expectedNumbers":[],"expectInsufficient":true},
-  {"id":"C30","kind":"audit","category":"contradiction","question":"论文是否使用了 100 块 GPU 训练模型？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["8"],["GPU"]],"expectedNumbers":["8"]}
+  {"id":"C30","kind":"audit","category":"contradiction","question":"论文是否使用了 100 块 GPU 训练模型？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["8"],["GPU"]],"expectedNumbers":["8"]},
+  {"id":"C31","split":"blind","kind":"chat","category":"architecture","question":"编码器和解码器各由多少个相同层堆叠而成？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["层","layer"]],"expectedNumbers":["6"]},
+  {"id":"C32","split":"blind","kind":"chat","category":"architecture","question":"多头注意力使用多少个并行注意力头？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["头","head"]],"expectedNumbers":["8"]},
+  {"id":"C33","split":"blind","kind":"chat","category":"numeric","question":"Transformer 的 d_model 维度是多少？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["d_model","512"]],"expectedNumbers":["512"]},
+  {"id":"C34","split":"blind","kind":"chat","category":"numeric","question":"模型训练时使用的 dropout rate 是多少？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["dropout"]],"expectedNumbers":["0.1"]},
+  {"id":"C35","split":"blind","kind":"chat","category":"numeric","question":"训练使用的 label smoothing value 是多少？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["label smoothing","平滑"]],"expectedNumbers":["0.1"]},
+  {"id":"C36","split":"blind","kind":"chat","category":"numeric","question":"学习率 warmup steps 一共有多少步？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["warmup"]],"expectedNumbers":["4000"]},
+  {"id":"C37","split":"blind","kind":"chat","category":"numeric","question":"Transformer big 模型共训练了多少个 steps？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["steps","步"]],"expectedNumbers":["300000"]},
+  {"id":"C38","split":"blind","kind":"chat","category":"metadata","question":"训练使用的是哪种型号的 NVIDIA GPU？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["P100"]],"expectedNumbers":[]},
+  {"id":"C39","split":"blind","kind":"chat","category":"numeric","question":"Transformer base 模型在英德翻译上的 BLEU 是多少？","fileNames":["attention.pdf"],"expectedKeywordGroups":[["英德","German"]],"expectedNumbers":["27.3"]},
+  {"id":"C40","split":"blind","kind":"audit","category":"multi-fact","question":"核验 Transformer big 模型在英法翻译上的最终 BLEU 分数。","fileNames":["attention.pdf"],"expectedKeywordGroups":[["英法","French"]],"expectedNumbers":["41.8"]}
 ]

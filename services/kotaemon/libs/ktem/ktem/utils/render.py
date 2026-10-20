@@ -1,3 +1,5 @@
+import html as html_lib
+import json
 import os
 
 import markdown
@@ -122,9 +124,15 @@ class Render:
         else:
             phrase = "true"
 
+        bbox = doc.metadata.get("bbox")
+        evidence_type = str(doc.metadata.get("evidence_type") or "")
+        bbox_attr = html_lib.escape(
+            json.dumps(bbox, ensure_ascii=False) if bbox else "",
+            quote=True,
+        )
         return f"""
         {html_content}
-        <a href="#" class="pdf-link" data-src="{BASE_PATH}/file={pdf_path}" data-page="{page_idx}" data-search="{highlight_text}" data-phrase="{phrase}">
+        <a href="#" class="pdf-link" data-src="{BASE_PATH}/file={pdf_path}" data-page="{page_idx}" data-search="{highlight_text}" data-phrase="{phrase}" data-bbox="{bbox_attr}" data-evidence-type="{html_lib.escape(evidence_type, quote=True)}">
             [Preview]
         </a>
         """  # noqa
@@ -153,10 +161,17 @@ class Render:
         image_origin = doc.metadata.get("image_origin")
         if doc.metadata.get("type", "") == "image" and image_origin:
             doc_content = Render.image(url=image_origin, text=doc.text)
+        elif doc.metadata.get("type", "") == "formula":
+            doc_content = (
+                "<pre class='formula-evidence'><code>"
+                f"{html_lib.escape(doc.text)}"
+                "</code></pre>"
+            )
         elif doc.metadata.get("type", "") == "table_raw":
             doc_content = Render.table_preserve_linebreaks(doc.text)
         else:
             doc_content = Render.table(doc.text)
+        doc_content = Render._structured_payload(doc) + doc_content
 
         return Render.collapsible(
             header=Render.preview(header, doc),
@@ -223,6 +238,12 @@ class Render:
                 url=image_origin,
                 text=text,
             )
+        elif doc.metadata.get("type", "") == "formula":
+            rendered_doc_content = (
+                "<pre class='formula-evidence'><code>"
+                f"{html_lib.escape(text)}"
+                "</code></pre>"
+            )
         elif doc.metadata.get("type", "") == "table_raw":
             rendered_doc_content = Render.table_preserve_linebreaks(doc.text)
         else:
@@ -235,11 +256,30 @@ class Render:
             highlight_text=highlight_text,
         )
         rendered_doc_content = (
-            f"<div class='evidence-content'>{rendered_doc_content}</div>"
+            Render._structured_payload(doc)
+            + f"<div class='evidence-content'>{rendered_doc_content}</div>"
         )
 
         return Render.collapsible(
             header=rendered_header,
             content=rendered_score + rendered_doc_content,
             open=open_collapsible,
+        )
+
+    @staticmethod
+    def _structured_payload(doc: RetrievedDocument) -> str:
+        evidence = doc.metadata.get("structured_evidence")
+        if not isinstance(evidence, dict):
+            return ""
+        payload = html_lib.escape(
+            json.dumps(
+                evidence,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ),
+            quote=True,
+        )
+        return (
+            "<span class='structured-evidence' "
+            f"data-evidence='{payload}' hidden></span>"
         )

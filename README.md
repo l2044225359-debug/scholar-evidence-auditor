@@ -56,6 +56,11 @@ npm run demo:status
 The WSL runtime is `/home/lh/race/workbench`. It owns its Linux Node.js,
 `node_modules`, SQLite data, uploads and build output. See `docs/wsl-server.md`.
 
+For a portable Docker deployment, copy `.env.example` to `.env`, fill in the
+required secrets and run `docker compose up --build -d`. The root Compose stack
+contains Next.js, Kotaemon, Citation Graph, initialization and the index worker;
+VibeVoice is an optional `voice` profile. See `docs/docker-compose.md`.
+
 The demo initializer creates `admin`, `examiner1`, and `examiner2`. Their random
 passwords and the active invitation code are written to the ignored local file
 `data/demo-accounts.json`.
@@ -74,6 +79,13 @@ This Windows development command is optional. It is not used by
 ```powershell
 npm run demo:start
 npm run demo:lan
+```
+
+Portable containers:
+
+```powershell
+npm run docker:config
+npm run docker:up
 ```
 
 The application is designed for a trusted local network. Do not expose it
@@ -99,6 +111,17 @@ Citation evidence opens in a local PDF.js academic reader with an outline,
 clickable numeric citations, bidirectional References navigation and a
 page-aligned Chinese/English translation pane. See `docs/pdf-reader.md`.
 
+Docling now emits normalized bboxes and structured `evidence-v1` payloads for
+tables, formulas and figures. Citations expose their evidence type and bbox;
+PDF previews can overlay the exact source region. See
+`docs/structured-evidence.md`.
+
+Entity and citation graphs now participate in GraphRAG retrieval through
+weighted multi-hop expansion before final answer synthesis. Large-graph and
+long-PDF performance suites are available through `npm run perf:graph`,
+`npm run perf:long-pdf` and `npm run perf:concurrency`. See
+`docs/graphrag-and-performance.md`.
+
 Citation Graph includes a local 20-paper corpus view with NetworkX PageRank,
 component/density metrics, foundational-paper ranking and Qwen-generated Future
 Work synthesis. See `docs/local-citation-graph.md`.
@@ -107,11 +130,12 @@ The same local graph now extracts Paper, Author, Topic, Method, Dataset, Metric
 and Claim entities with grounded evidence and confidence scores. See
 `docs/paper-entities.md`.
 
-The Agent Trace panel records chat planning, retrieval, model routing and tool
-steps. It also exposes two real tools: controlled arXiv download/ingestion and
-CSV analysis with pandas, Matplotlib, Qwen-generated captions and copyable
-Mermaid/TikZ scripts. A Writing tool produces an evidence-grounded paper
-framework, verified References and BibTeX. See `docs/agent-tools.md`.
+The Agent Trace panel is backed by a dynamic Planner and native Function Calling
+loop. Qwen chooses among real corpus, retrieval, citation-graph, Future Work,
+arXiv and document-comparison tools; failed observations are returned to the
+model for Replan. See `docs/agent-runtime.md`. Controlled arXiv ingestion, CSV
+analysis, Mermaid/TikZ scripts and evidence-grounded writing remain available
+in the same panel. See `docs/agent-tools.md`.
 
 Evidence audits extract claims, map page evidence, verify numbers and citation
 integrity, and generate JSON or printable reports. See `docs/evidence-audit.md`.
@@ -120,11 +144,18 @@ Completed chat answers show a deterministic evidence-coverage score with
 page-grounding, citation-alignment and document-scope metrics. See
 `docs/evidence-coverage.md`.
 
+Evaluation now separates the 30-case development set from a 10-case blind
+holdout and reports a same-task fixed-RAG baseline, win/loss/tie counts,
+latency and P95 latency. Aggregated metrics are also exposed in the
+authenticated system page. See `docs/evaluation-metrics.md`.
+
 ## Verification
 
 ```powershell
 npm run demo:status
 npm run demo:verify
+npm run test:metrics
+npm run demo:evaluate:blind
 npm run demo:evaluate
 ```
 

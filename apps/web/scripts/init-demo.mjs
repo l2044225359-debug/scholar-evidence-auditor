@@ -20,8 +20,12 @@ const dataDir = process.env.DEMO_DATA_DIR
 const dbPath = process.env.DEMO_DB_PATH
   ? resolve(process.env.DEMO_DB_PATH)
   : resolve(dataDir, "demo.sqlite");
-const schemaPath = resolve(appRoot, "lib/db/schema.sql");
-const credentialsPath = resolve(dataDir, "demo-accounts.json");
+const schemaPath = process.env.DEMO_SCHEMA_PATH
+  ? resolve(process.env.DEMO_SCHEMA_PATH)
+  : resolve(appRoot, "lib/db/schema.sql");
+const credentialsPath = process.env.DEMO_CREDENTIALS_PATH
+  ? resolve(process.env.DEMO_CREDENTIALS_PATH)
+  : resolve(dataDir, "demo-accounts.json");
 
 mkdirSync(dataDir, { recursive: true });
 const db = new DatabaseSync(dbPath);

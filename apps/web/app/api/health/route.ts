@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
+import { workerLockFile } from "@/lib/runtime-paths";
 import { bffHeaders, serverConfig } from "@/lib/server-config";
 import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,7 @@ async function fetchHealth(url: string, headers?: HeadersInit) {
 }
 
 function workerHealth() {
-  const lockPath = resolve(process.cwd(), "../../work/index-worker.lock");
+  const lockPath = workerLockFile();
   if (!existsSync(lockPath)) {
     return { status: "unavailable", message: "worker lock missing" };
   }

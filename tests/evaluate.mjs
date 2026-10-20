@@ -2,6 +2,14 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  buildBlindProtocol,
+  caseSplit,
+  compareBaseline,
+  scoreOutput,
+  summarizeResults,
+} from "./evaluation/metrics.mjs";
+
 const testDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(testDir, "..");
 const envPath = resolve(repoRoot, "apps/web/.env.local");
@@ -22,16 +30,34 @@ const token = process.env.CHAT_BFF_TOKEN ?? "";
 const cases = JSON.parse(
   readFileSync(resolve(testDir, "evaluation/cases.json"), "utf8"),
 );
+const cliArgs = new Set(process.argv.slice(2));
 const limit = Number(process.env.EVAL_LIMIT ?? 0);
 const kindFilter = process.env.EVAL_KIND;
+const splitFilter =
+  process.env.EVAL_SPLIT ?? (cliArgs.has("--blind") ? "blind" : "");
+const baselineMode =
+  process.env.EVAL_BASELINE ??
+  (cliArgs.has("--no-baseline") ? "off" : "blind");
 const idFilter = process.env.EVAL_IDS
   ? new Set(process.env.EVAL_IDS.split(",").map((id) => id.trim()))
   : null;
+if (!["", "all", "dev", "blind"].includes(splitFilter)) {
+  throw new Error("EVAL_SPLIT must be all, dev, blind, or empty");
+}
+if (!["off", "blind", "all"].includes(baselineMode)) {
+  throw new Error("EVAL_BASELINE must be off, blind, or all");
+}
 const providerAccessPattern =
   /AccessDenied\.Unpurchased|Access to model denied/i;
 const selected = cases
   .filter((item) => !idFilter || idFilter.has(item.id))
   .filter((item) => !kindFilter || item.kind === kindFilter)
+  .filter(
+    (item) =>
+      !splitFilter ||
+      splitFilter === "all" ||
+      caseSplit(item) === splitFilter,
+  )
   .slice(0, limit > 0 ? limit : undefined);
 
 const fileResponse = await fetch(`${baseUrl}/api/bff/files`, {
@@ -61,7 +87,7 @@ function parseSse(text) {
   return events;
 }
 
-async function runChat(item, fileIds) {
+async function runChat(item, fileIds, agentMode = true) {
   let lastError = "Chat stream failed";
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
@@ -78,6 +104,7 @@ async function runChat(item, fileIds) {
           language: "zh",
           citation_mode: "inline",
           model_mode: "auto",
+          agent_mode: agentMode,
         }),
         signal: AbortSignal.timeout(180_000),
       });
@@ -105,6 +132,7 @@ async function runChat(item, fileIds) {
       return {
         answer: done.answer,
         citations,
+        agent: done.agent,
       };
     } catch (error) {
       lastError = error instanceof Error ? error.message : "Chat stream failed";
@@ -152,11 +180,20 @@ async function runAudit(item, fileIds) {
 }
 
 const results = [];
+const baselineResults = [];
+let stopEvaluation = false;
+const shouldRunBaseline = (item) =>
+  baselineMode === "all" ||
+  (baselineMode === "blind" && caseSplit(item) === "blind");
+
 for (const item of selected) {
   const fileIds = item.fileNames.map((name) => fileByName.get(name));
   if (fileIds.some((id) => !id)) {
     results.push({
       id: item.id,
+      split: caseSplit(item),
+      kind: item.kind,
+      category: item.category,
       passed: false,
       error: `Missing files: ${item.fileNames.join(", ")}`,
     });
@@ -168,48 +205,27 @@ for (const item of selected) {
     const output =
       item.kind === "audit"
         ? await runAudit(item, fileIds)
-        : await runChat(item, fileIds);
+        : await runChat(item, fileIds, true);
     const elapsedMs = Date.now() - started;
-    const answer = output.answer ?? "";
-    const citations = output.citations ?? [];
-    const keywordGroups =
-      item.expectedKeywordGroups ??
-      (item.expectedKeywords ?? []).map((keyword) => [keyword]);
-    const keywordPass = keywordGroups.every((group) =>
-      group.some((keyword) =>
-        answer.toLowerCase().includes(keyword.toLowerCase()),
-      ),
-    );
-    const numberPass = (item.expectedNumbers ?? []).every((number) =>
-      answer.includes(number),
-    );
-    const refusalPass = item.expectInsufficient
-      ? /不知道|证据不足|无法|insufficient|not enough|cannot|don't know|do not know/i.test(
-          answer,
-        )
-      : true;
-    const passed = keywordPass && numberPass && refusalPass;
+    const scored = scoreOutput(item, output);
     results.push({
       id: item.id,
+      split: caseSplit(item),
       kind: item.kind,
       category: item.category,
-      passed,
-      keywordPass,
-      numberPass,
-      refusalPass,
-      retrievalHit: citations.length > 0,
-      citationPass: citations.some((citation) => citation.page != null),
+      ...scored,
       elapsedMs,
-      answer: answer.slice(0, 1000),
-      citationCount: citations.length,
+      answer: String(output.answer ?? "").slice(0, 1000),
+      agent: output.agent ?? undefined,
     });
     console.log(
-      `${passed ? "PASS" : "FAIL"} ${item.id} ${item.category} ${elapsedMs}ms`,
+      `${scored.passed ? "PASS" : "FAIL"} ${item.id} ${item.category} ${elapsedMs}ms`,
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed";
     results.push({
       id: item.id,
+      split: caseSplit(item),
       kind: item.kind,
       category: item.category,
       passed: false,
@@ -224,27 +240,101 @@ for (const item of selected) {
       break;
     }
   }
+
+  if (!shouldRunBaseline(item)) continue;
+
+  const baselineStarted = Date.now();
+  try {
+    const baselineOutput =
+      item.kind === "audit"
+        ? await runAudit(item, fileIds)
+        : await runChat(item, fileIds, false);
+    const elapsedMs = Date.now() - baselineStarted;
+    const scored = scoreOutput(item, baselineOutput);
+    baselineResults.push({
+      id: item.id,
+      split: caseSplit(item),
+      kind: item.kind,
+      category: item.category,
+      mode: "fixed-rag-no-agent",
+      ...scored,
+      elapsedMs,
+      answer: String(baselineOutput.answer ?? "").slice(0, 1000),
+      agent: baselineOutput.agent ?? undefined,
+    });
+    console.log(
+      `${scored.passed ? "BASE PASS" : "BASE FAIL"} ${item.id} ${elapsedMs}ms`,
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Baseline failed";
+    baselineResults.push({
+      id: item.id,
+      split: caseSplit(item),
+      kind: item.kind,
+      category: item.category,
+      mode: "fixed-rag-no-agent",
+      passed: false,
+      error: message,
+      elapsedMs: Date.now() - baselineStarted,
+    });
+    console.error(`BASE FAIL ${item.id} ${message}`);
+    if (message.startsWith("PROVIDER_ACCESS_DENIED:")) {
+      console.error(
+        "Provider access was denied; stopping evaluation to avoid repeated 403s.",
+      );
+      stopEvaluation = true;
+    }
+  }
+  if (stopEvaluation) break;
 }
 
-const total = results.length;
-const rate = (key) =>
-  total
-    ? results.filter((item) => item[key]).length / total
-    : 0;
-const summary = {
-  total,
-  passRate: rate("passed"),
-  retrievalHitRate: rate("retrievalHit"),
-  citationPassRate: rate("citationPass"),
-  numberPassRate: rate("numberPass"),
-  refusalPassRate: rate("refusalPass"),
-  averageLatencyMs:
-    total
-      ? results.reduce((sum, item) => sum + (item.elapsedMs ?? 0), 0) / total
-      : 0,
+const summary = summarizeResults(results);
+const blindResults = results.filter(
+  (item) => caseSplit(item) === "blind",
+);
+const developmentResults = results.filter(
+  (item) => caseSplit(item) === "dev",
+);
+const blindSummary = summarizeResults(blindResults);
+const baselineSystemResults =
+  baselineMode === "all" ? results : blindResults;
+const baselineComparison = compareBaseline(
+  baselineSystemResults,
+  baselineResults,
+);
+const retrievalOnlyBaseline = {
+  name: "retrieval-only-evidence",
+  description:
+    "No answer-quality claim; measures whether the blind query retrieved page-grounded evidence.",
+  evaluated: blindResults.length,
+  retrievalHitRate: blindSummary.retrievalHitRate,
+  citationPassRate: blindSummary.citationPassRate,
 };
 
-const output = { summary, results };
+summary.blind = {
+  ...blindSummary,
+  baselinePassRate: baselineComparison.baselinePassRate,
+  baselinePassRateGain: baselineComparison.absolutePassRateGain,
+};
+summary.development = developmentResults.length
+  ? summarizeResults(developmentResults)
+  : undefined;
+summary.baselines = {
+  fixedRag: baselineComparison,
+  retrievalOnly: retrievalOnlyBaseline,
+};
+
+const protocol = buildBlindProtocol(cases);
+protocol.executedCaseCount = blindResults.length;
+protocol.baselineMode = baselineMode;
+
+const output = {
+  protocol,
+  summary,
+  results,
+  baselineResults,
+};
 writeFileSync(
   resolve(testDir, "evaluation/results.json"),
   `${JSON.stringify(output, null, 2)}\n`,
@@ -252,11 +342,16 @@ writeFileSync(
 );
 console.log(JSON.stringify(summary, null, 2));
 
+const minBlindPassRate = Number(
+  process.env.EVAL_MIN_BLIND_PASS_RATE ?? 0.8,
+);
 if (
   summary.retrievalHitRate < 0.9 ||
   summary.citationPassRate < 0.9 ||
   summary.refusalPassRate < 0.9 ||
-  summary.numberPassRate < 1
+  summary.numberPassRate < 1 ||
+  (blindSummary.total > 0 &&
+    blindSummary.passRate < minBlindPassRate)
 ) {
   process.exitCode = 1;
 }

@@ -64,10 +64,14 @@ POST /api/bff/index
 
 Kotaemon uses:
 
-- Docling for layout, text, tables and figures
+- Docling for layout, text, tables, formulas and figures
 - `qwen3.5-ocr` for scanned or low-text pages
 - `qwen3.7-text-embedding` for vectors
 - `qwen3-rerank` for retrieval reranking
+
+Table, formula and figure chunks include a normalized page bbox and an
+`evidence-v1` structured payload. Existing PDFs must be re-indexed once to gain
+these fields. See `docs/structured-evidence.md`.
 
 ## Administration
 

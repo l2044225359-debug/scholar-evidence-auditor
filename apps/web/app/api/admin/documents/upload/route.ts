@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { requireAdmin } from "@/lib/authz";
 import { createIndexJob } from "@/lib/db";
+import { uploadsDirectory } from "@/lib/runtime-paths";
 import { bffHeaders, serverConfig } from "@/lib/server-config";
 
 export const runtime = "nodejs";
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
   }
 
   const id = randomUUID();
-  const uploadDir = path.resolve(process.cwd(), "../../data/uploads");
+  const uploadDir = uploadsDirectory();
   await mkdir(uploadDir, { recursive: true });
   const filePath = path.join(uploadDir, `${id}.pdf`);
   await writeFile(filePath, bytes);

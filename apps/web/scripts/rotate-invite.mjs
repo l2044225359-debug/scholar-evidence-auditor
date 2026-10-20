@@ -7,8 +7,15 @@ import { DatabaseSync } from "node:sqlite";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(scriptDir, "..");
 const repoRoot = resolve(appRoot, "../..");
-const dbPath = resolve(repoRoot, "data/demo.sqlite");
-const credentialsPath = resolve(repoRoot, "data/demo-accounts.json");
+const dataDir = process.env.DEMO_DATA_DIR
+  ? resolve(process.env.DEMO_DATA_DIR)
+  : resolve(repoRoot, "data");
+const dbPath = process.env.DEMO_DB_PATH
+  ? resolve(process.env.DEMO_DB_PATH)
+  : resolve(dataDir, "demo.sqlite");
+const credentialsPath = process.env.DEMO_CREDENTIALS_PATH
+  ? resolve(process.env.DEMO_CREDENTIALS_PATH)
+  : resolve(dataDir, "demo-accounts.json");
 const database = new DatabaseSync(dbPath);
 
 const admin = database

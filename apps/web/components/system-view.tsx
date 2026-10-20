@@ -2,12 +2,21 @@
 
 import {
   AlertTriangle,
+  BarChart3,
   CheckCircle2,
   Loader2,
   RefreshCw,
+  Scale,
   Server,
+  ShieldCheck,
+  Timer,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 import type { MessageKey } from "@/lib/i18n";
 
@@ -21,6 +30,41 @@ type HealthPayload = {
   vibevoice?: Record<string, unknown>;
   worker?: Record<string, unknown>;
   generated_at?: string;
+};
+
+type EvaluationPayload = {
+  available: boolean;
+  generated_at?: string;
+  protocol?: {
+    name?: string;
+    total?: number;
+    executed?: number;
+    question_set_sha256?: string;
+    rubric_sha256?: string;
+  };
+  metrics?: {
+    blind?: {
+      total: number;
+      passRate: number;
+      averageLatencyMs: number;
+      p95LatencyMs: number;
+      baselinePassRate?: number;
+      baselinePassRateGain?: number;
+    };
+    baselines?: {
+      fixedRag?: {
+        evaluated: number;
+        systemPassRate: number;
+        baselinePassRate: number;
+        absolutePassRateGain: number;
+        wins: number;
+        losses: number;
+        ties: number;
+        systemAverageLatencyMs: number;
+        baselineAverageLatencyMs: number;
+      };
+    };
+  };
 };
 
 function statusOf(value?: Record<string, unknown>) {
@@ -101,9 +145,31 @@ function StatusPanel({
   );
 }
 
+function EvaluationMetric({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className={styles.evaluationMetric}>
+      <span className={styles.evaluationMetricIcon}>{icon}</span>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
+  );
+}
+
 export function SystemView() {
   const { t } = useLanguage();
   const [health, setHealth] = useState<HealthPayload>({});
+  const [evaluation, setEvaluation] = useState<EvaluationPayload>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -117,6 +183,15 @@ export function SystemView() {
       });
       if (!response.ok) throw new Error(t("system.healthError"));
       setHealth(await response.json());
+      const evaluationResponse = await fetch("/api/evaluation", {
+        cache: "no-store",
+        credentials: "include",
+      }).catch(() => null);
+      if (evaluationResponse?.ok) {
+        setEvaluation(await evaluationResponse.json());
+      } else {
+        setEvaluation(undefined);
+      }
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : t("system.healthError"),
@@ -129,6 +204,9 @@ export function SystemView() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const blind = evaluation?.metrics?.blind;
+  const fixedRag = evaluation?.metrics?.baselines?.fixedRag;
 
   return (
     <div className={styles.page}>
@@ -181,6 +259,87 @@ export function SystemView() {
             loading={loading}
           />
         </div>
+        <section className={styles.evaluationPanel}>
+          <div className={styles.evaluationHeader}>
+            <div>
+              <span className={styles.evaluationEyebrow}>
+                <ShieldCheck size={14} />
+                {t("system.protocol")}
+              </span>
+              <h2>{t("system.evaluationTitle")}</h2>
+              <p>{t("system.evaluationSubtitle")}</p>
+            </div>
+            {evaluation?.generated_at ? (
+              <code>
+                {new Date(evaluation.generated_at).toLocaleString()}
+              </code>
+            ) : null}
+          </div>
+          {blind ? (
+            <>
+              <div className={styles.evaluationGrid}>
+                <EvaluationMetric
+                  icon={<ShieldCheck size={16} />}
+                  label={t("system.blindPass")}
+                  value={formatPercent(blind.passRate)}
+                  detail={`${blind.total} ${t("system.evaluationCases")}`}
+                />
+                <EvaluationMetric
+                  icon={<Scale size={16} />}
+                  label={t("system.baselinePass")}
+                  value={formatPercent(
+                    fixedRag?.baselinePassRate ??
+                      blind.baselinePassRate ??
+                      0,
+                  )}
+                  detail={`${fixedRag?.wins ?? 0}/${fixedRag?.losses ?? 0}/${fixedRag?.ties ?? 0} ${t("system.baselineRecord")}`}
+                />
+                <EvaluationMetric
+                  icon={<BarChart3 size={16} />}
+                  label={t("system.baselineGap")}
+                  value={formatPointDelta(
+                    fixedRag?.absolutePassRateGain ??
+                      blind.baselinePassRateGain ??
+                      0,
+                  )}
+                  detail={t("system.baselineGapHint")}
+                />
+                <EvaluationMetric
+                  icon={<Timer size={16} />}
+                  label={t("system.latency")}
+                  value={formatLatency(blind.averageLatencyMs)}
+                  detail={`P95 ${formatLatency(blind.p95LatencyMs)}`}
+                />
+              </div>
+              <div className={styles.evaluationFooter}>
+                <span>
+                  {evaluation?.protocol?.name ?? "blind-v1"} ·{" "}
+                  {evaluation?.protocol?.executed ?? blind.total}/
+                  {evaluation?.protocol?.total ?? blind.total}
+                </span>
+                <code
+                  title={evaluation?.protocol?.question_set_sha256 ?? ""}
+                >
+                  sha256:
+                  {(evaluation?.protocol?.question_set_sha256 ?? "").slice(
+                    0,
+                    12,
+                  ) || "unavailable"}
+                </code>
+                <span>
+                  {t("system.baselineLatency")}:{" "}
+                  {formatLatency(
+                    fixedRag?.baselineAverageLatencyMs ?? 0,
+                  )}
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className={styles.evaluationEmpty}>
+              {t("system.notEvaluated")}
+            </p>
+          )}
+        </section>
         {health.generated_at ? (
           <p className={styles.generatedAt}>
             {health.generated_at}
@@ -189,6 +348,20 @@ export function SystemView() {
       </main>
     </div>
   );
+}
+
+function formatPercent(value: number) {
+  return `${(Number(value) * 100).toFixed(1)}%`;
+}
+
+function formatPointDelta(value: number) {
+  const points = Number(value) * 100;
+  return `${points >= 0 ? "+" : ""}${points.toFixed(1)} pp`;
+}
+
+function formatLatency(value: number) {
+  const seconds = Number(value) / 1000;
+  return `${seconds >= 10 ? seconds.toFixed(1) : seconds.toFixed(2)} s`;
 }
 
 function fieldLabel(t: (key: MessageKey) => string, key: string) {

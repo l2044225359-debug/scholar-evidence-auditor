@@ -40,6 +40,12 @@ type ReaderPage = {
   text: string;
 };
 
+type EvidenceHighlight = {
+  page: number;
+  bbox: [number, number, number, number];
+  evidenceType: string;
+};
+
 type HeadingItem = {
   id: string;
   title: string;
@@ -400,6 +406,7 @@ function PdfPage({
   zoom,
   scrollRoot,
   highlighted,
+  evidenceHighlight,
   onActive,
 }: {
   pdf: PdfDocument;
@@ -408,6 +415,7 @@ function PdfPage({
   zoom: number;
   scrollRoot: HTMLDivElement | null;
   highlighted: boolean;
+  evidenceHighlight?: EvidenceHighlight;
   onActive: (page: number) => void;
 }) {
   const containerRef = useRef<HTMLElement>(null);
@@ -509,6 +517,19 @@ function PdfPage({
       ) : (
         <div className={styles.pagePlaceholder}>p.{page.pageNumber}</div>
       )}
+      {evidenceHighlight ? (
+        <div
+          className={styles.bboxEvidence}
+          style={{
+            left: `${evidenceHighlight.bbox[0] * 100}%`,
+            top: `${evidenceHighlight.bbox[1] * 100}%`,
+            width: `${(evidenceHighlight.bbox[2] - evidenceHighlight.bbox[0]) * 100}%`,
+            height: `${(evidenceHighlight.bbox[3] - evidenceHighlight.bbox[1]) * 100}%`,
+          }}
+        >
+          <span>{evidenceHighlight.evidenceType}</span>
+        </div>
+      ) : null}
       {renderError ? (
         <div className={styles.pageRenderError}>{renderError}</div>
       ) : null}
@@ -522,6 +543,26 @@ export function PdfReader() {
   const { locale, t } = useLanguage();
   const path = searchParams.get("path") ?? "";
   const initialPage = Math.max(1, Number(searchParams.get("page") ?? 1) || 1);
+  const evidenceHighlight = (() => {
+    const values = (searchParams.get("bbox") ?? "")
+      .split(",")
+      .map((value) => Number(value));
+    if (
+      values.length !== 4 ||
+      values.some((value) => !Number.isFinite(value))
+    ) {
+      return undefined;
+    }
+    const [x0, y0, x1, y1] = values;
+    if (x0 < 0 || y0 < 0 || x1 > 1 || y1 > 1 || x1 <= x0 || y1 <= y0) {
+      return undefined;
+    }
+    return {
+      page: initialPage,
+      bbox: [x0, y0, x1, y1] as [number, number, number, number],
+      evidenceType: searchParams.get("evidence") ?? "evidence",
+    };
+  })();
   const proxyUrl = useMemo(
     () =>
       path
@@ -1037,6 +1078,11 @@ export function PdfReader() {
                 zoom={zoom}
                 scrollRoot={leftScrollRef.current}
                 highlighted={highlightedPage === page.pageNumber}
+                evidenceHighlight={
+                  evidenceHighlight?.page === page.pageNumber
+                    ? evidenceHighlight
+                    : undefined
+                }
                 onActive={setActivePage}
               />
             ))}

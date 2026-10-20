@@ -12,8 +12,12 @@ const dataDir = process.env.DEMO_DATA_DIR
 const dbPath = process.env.DEMO_DB_PATH
   ? resolve(process.env.DEMO_DB_PATH)
   : resolve(dataDir, "demo.sqlite");
-const accountsPath = resolve(dataDir, "demo-accounts.json");
-const uploadsPath = resolve(dataDir, "uploads");
+const accountsPath = process.env.DEMO_CREDENTIALS_PATH
+  ? resolve(process.env.DEMO_CREDENTIALS_PATH)
+  : resolve(dataDir, "demo-accounts.json");
+const uploadsPath = process.env.DEMO_UPLOAD_DIR
+  ? resolve(process.env.DEMO_UPLOAD_DIR)
+  : resolve(dataDir, "uploads");
 const backupRoot = resolve(repoRoot, "work/demo-backups");
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 const backupDir = resolve(backupRoot, timestamp);

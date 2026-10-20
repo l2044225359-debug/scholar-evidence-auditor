@@ -11,12 +11,15 @@ import {
   ExternalLink,
   FileText,
   Gauge,
+  Image as ImageIcon,
   Library,
   Loader2,
   Network,
   Send,
+  Sigma,
   Sparkles,
   Square,
+  Table2,
   Volume2,
 } from "lucide-react";
 import {
@@ -35,7 +38,7 @@ import type {
   KnowledgeCollection,
   SourceFile,
 } from "@/lib/types";
-import type { Locale } from "@/lib/i18n";
+import type { Locale, MessageKey } from "@/lib/i18n";
 
 import {
   AgentPanel,
@@ -66,6 +69,18 @@ function sizeLabel(size: number) {
   if (size < 1024) return `${size} B`;
   if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function evidenceTypeLabel(
+  t: (key: MessageKey) => string,
+  evidenceType: string,
+) {
+  if (evidenceType === "table") return t("workspace.evidenceTable");
+  if (evidenceType === "formula") return t("workspace.evidenceFormula");
+  if (evidenceType === "figure" || evidenceType === "image") {
+    return t("workspace.evidenceFigure");
+  }
+  return t("workspace.evidenceText");
 }
 
 function cleanAnswer(value: string) {
@@ -375,6 +390,7 @@ export function Workspace() {
           language: locale,
           citation_mode: "inline",
           model_mode: modelMode,
+          agent_mode: modelMode !== "fast",
         }),
       });
 
@@ -412,6 +428,11 @@ export function Workspace() {
                 data.status === "info"
                   ? data.status
                   : "success",
+              phase: data.phase,
+              iteration: data.iteration,
+              tool: data.tool,
+              arguments: data.arguments,
+              resultPreview: data.result_preview,
               durationMs: data.duration_ms,
               createdAt: Date.now(),
             });
@@ -467,7 +488,11 @@ export function Workspace() {
               kind: "result",
               title: "Answer complete",
               title_zh: "回答完成",
-              detail: `${data.citations?.length ?? 0} citation anchor(s)`,
+              detail: [
+                `${data.agent?.tool_call_count ?? 0} tool call(s)`,
+                `${data.agent?.replan_count ?? 0} replan(s)`,
+                `${data.citations?.length ?? 0} citation anchor(s)`,
+              ].join(" · "),
               status: "success",
               durationMs: Date.now() - requestStartedAt,
               createdAt: Date.now(),
@@ -991,6 +1016,17 @@ export function Workspace() {
                 citation.scores.reranking_score ??
                 citation.scores.vectorstore_score ??
                 citation.scores.relevance_score;
+              const evidenceType = citation.evidence_type ?? "text";
+              const EvidenceIcon =
+                evidenceType === "table"
+                  ? Table2
+                  : evidenceType === "formula"
+                    ? Sigma
+                    : evidenceType === "figure" ||
+                        evidenceType === "image"
+                      ? ImageIcon
+                      : FileText;
+              const bbox = citation.bbox;
               return (
                 <article
                   className={styles.evidenceCard}
@@ -1000,16 +1036,21 @@ export function Workspace() {
                 >
                   <div className={styles.evidenceCardHeader}>
                     <div className={styles.evidenceFile}>
-                      <FileText size={13} />
+                      <EvidenceIcon size={13} />
                       <span title={citation.file_name}>
                         {citation.file_name}
                       </span>
                     </div>
-                    {citation.page ? (
-                      <span className={styles.pageBadge}>
-                        p.{citation.page}
+                    <div className={styles.evidenceBadges}>
+                      <span className={styles.evidenceTypeBadge}>
+                        {evidenceTypeLabel(t, evidenceType)}
                       </span>
-                    ) : null}
+                      {citation.page ? (
+                        <span className={styles.pageBadge}>
+                          p.{citation.page}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                   <div className={styles.evidenceSnippet}>
                     {citation.snippet}
@@ -1024,11 +1065,20 @@ export function Workspace() {
                           } ${displayScore.toFixed(2)}`
                         : t("workspace.indexedSource")}
                     </span>
+                    {bbox ? (
+                      <span className={styles.bboxLabel}>
+                        bbox {bbox.map((value) => value.toFixed(3)).join(", ")}
+                      </span>
+                    ) : null}
                     {citation.preview_url ? (
                       <a
                         href={`/reader?path=${encodeURIComponent(
                           citation.preview_url,
-                        )}&page=${citation.page ?? 1}`}
+                        )}&page=${citation.page ?? 1}${
+                          bbox
+                            ? `&bbox=${encodeURIComponent(bbox.join(","))}`
+                            : ""
+                        }&evidence=${encodeURIComponent(evidenceType)}`}
                         target="_blank"
                         rel="noreferrer"
                       >

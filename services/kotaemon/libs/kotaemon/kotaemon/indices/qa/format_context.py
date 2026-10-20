@@ -10,6 +10,7 @@ EVIDENCE_MODE_TEXT = 0
 EVIDENCE_MODE_TABLE = 1
 EVIDENCE_MODE_CHATBOT = 2
 EVIDENCE_MODE_FIGURE = 3
+EVIDENCE_MODE_FORMULA = 4
 
 
 class PrepareEvidencePipeline(BaseComponent):
@@ -65,6 +66,18 @@ class PrepareEvidencePipeline(BaseComponent):
                             + retrieved_content
                             + "\n<br>"
                         )
+            elif retrieved_item.metadata.get("type", "") == "formula":
+                evidence_modes.append(EVIDENCE_MODE_FORMULA)
+                retrieved_content = retrieved_item.metadata.get(
+                    "formula_origin",
+                    retrieved_item.text,
+                )
+                if retrieved_content not in evidence:
+                    evidence += (
+                        f"<br><b>Formula from {source}</b>\n"
+                        + retrieved_content
+                        + "\n<br>"
+                    )
             elif retrieved_item.metadata.get("type", "") == "chatbot":
                 evidence_modes.append(EVIDENCE_MODE_CHATBOT)
                 retrieved_content = retrieved_item.metadata["window"]
@@ -101,6 +114,8 @@ class PrepareEvidencePipeline(BaseComponent):
         evidence_mode = EVIDENCE_MODE_TEXT
         if EVIDENCE_MODE_FIGURE in evidence_modes:
             evidence_mode = EVIDENCE_MODE_FIGURE
+        elif EVIDENCE_MODE_FORMULA in evidence_modes:
+            evidence_mode = EVIDENCE_MODE_FORMULA
         elif EVIDENCE_MODE_TABLE in evidence_modes:
             evidence_mode = EVIDENCE_MODE_TABLE
 

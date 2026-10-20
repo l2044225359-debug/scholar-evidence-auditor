@@ -6,6 +6,7 @@ apps/web/tsconfig.tsbuildinfo
 data/*
 !data/.gitkeep
 work/
+.agent-browser/
 outputs/
 tests/evaluation/results.json
 
@@ -24,6 +25,9 @@ services/citation-graph/*.log
 services/citation-graph/*.pid
 
 # General
+.env
+.env.*
+!.env.example
 *.pyc
 *.tmp
 *.pid

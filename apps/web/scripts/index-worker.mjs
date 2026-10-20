@@ -1,5 +1,6 @@
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   unlinkSync,
   writeFileSync,
@@ -13,11 +14,21 @@ import { Blob } from "node:buffer";
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const appRoot = resolve(scriptDir, "..");
 const repoRoot = resolve(appRoot, "../..");
-const dataDir = resolve(repoRoot, "data");
-const dbPath = resolve(dataDir, "demo.sqlite");
-const schemaPath = resolve(appRoot, "lib/db/schema.sql");
-const uploadDir = resolve(dataDir, "uploads");
-const lockPath = resolve(repoRoot, "work/index-worker.lock");
+const dataDir = process.env.DEMO_DATA_DIR
+  ? resolve(process.env.DEMO_DATA_DIR)
+  : resolve(repoRoot, "data");
+const dbPath = process.env.DEMO_DB_PATH
+  ? resolve(process.env.DEMO_DB_PATH)
+  : resolve(dataDir, "demo.sqlite");
+const schemaPath = process.env.DEMO_SCHEMA_PATH
+  ? resolve(process.env.DEMO_SCHEMA_PATH)
+  : resolve(appRoot, "lib/db/schema.sql");
+const uploadDir = process.env.DEMO_UPLOAD_DIR
+  ? resolve(process.env.DEMO_UPLOAD_DIR)
+  : resolve(dataDir, "uploads");
+const lockPath = process.env.WORKER_LOCK_PATH
+  ? resolve(process.env.WORKER_LOCK_PATH)
+  : resolve(repoRoot, "work/index-worker.lock");
 
 function loadEnv() {
   const envPath = resolve(appRoot, ".env.local");
@@ -65,6 +76,9 @@ function releaseLock() {
 }
 
 loadEnv();
+mkdirSync(dirname(dbPath), { recursive: true });
+mkdirSync(dirname(lockPath), { recursive: true });
+mkdirSync(uploadDir, { recursive: true });
 acquireLock();
 process.on("exit", releaseLock);
 process.on("SIGINT", () => process.exit(0));

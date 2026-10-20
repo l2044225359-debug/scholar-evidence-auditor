@@ -13,6 +13,13 @@
     "demo:lan": "powershell -ExecutionPolicy Bypass -File scripts/setup-lan.ps1",
     "demo:verify": "powershell -ExecutionPolicy Bypass -File scripts/verify.ps1",
     "demo:evaluate": "node tests/evaluate.mjs",
+    "demo:evaluate:blind": "node tests/evaluate.mjs --blind",
+    "demo:reindex:structured": "powershell -ExecutionPolicy Bypass -File scripts/reindex-structured-evidence.ps1",
+    "test:metrics": "node --test tests/test-metrics.mjs",
+    "perf:graph": "powershell -ExecutionPolicy Bypass -File scripts/performance.ps1 -Suite graph",
+    "perf:long-pdf": "powershell -ExecutionPolicy Bypass -File scripts/performance.ps1 -Suite long-pdf",
+    "perf:long-pdf:index": "powershell -ExecutionPolicy Bypass -File scripts/performance.ps1 -Suite long-pdf-index",
+    "perf:concurrency": "powershell -ExecutionPolicy Bypass -File scripts/performance.ps1 -Suite concurrency",
     "demo:video": "powershell -ExecutionPolicy Bypass -File scripts/create-demo-video.ps1",
     "docs:technical": "C:\\Users\\lenovo\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe scripts/build-technical-document.py --project-root . --output outputs/Scholar-technical-document.pdf",
     "git:bundle": "powershell -ExecutionPolicy Bypass -File scripts/build-git-bundle.ps1",
@@ -21,6 +28,11 @@
     "web:dev": "npm --prefix apps/web run dev",
     "web:build": "npm --prefix apps/web run build",
     "web:start": "npm --prefix apps/web run start",
-    "web:lint": "npm --prefix apps/web run lint"
+    "web:lint": "npm --prefix apps/web run lint",
+    "docker:config": "docker compose --env-file .env.example config",
+    "docker:up": "docker compose up --build -d",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f web kotaemon index-worker",
+    "docker:voice": "docker compose --profile voice up --build -d"
   }
 }

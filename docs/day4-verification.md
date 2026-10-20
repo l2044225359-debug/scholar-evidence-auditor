@@ -78,6 +78,21 @@ npm run demo:evaluate
 The evaluator stops immediately on provider access denial so it does not
 overwrite the run with dozens of repeated 403 failures.
 
+## Baseline and blind holdout
+
+- Development set: C01-C30.
+- Locked blind holdout: C31-C40.
+- Blind protocol separates generation inputs from the scoring rubric and
+  records SHA-256 hashes for both.
+- Current blind result: system 10/10, fixed-RAG baseline 10/10.
+- Win/loss/tie against baseline: 0/0/10.
+- Retrieval hit, page citation, numeric coverage and refusal checks: 100%.
+- System average latency: 33.97 seconds; baseline: 8.18 seconds.
+- System P95 latency: 118.61 seconds.
+
+The baseline tie is intentional and reported without claiming an unsupported
+accuracy gain. See `docs/evaluation-metrics.md`.
+
 ## Before submission
 
 - Rotate the Bailian key because an older log previously exposed it.

@@ -25,8 +25,13 @@ The Citation Graph service builds a directed NetworkX graph and reports:
 - foundational papers ranked by PageRank;
 - recent frontier candidates for horizon scanning.
 
-The local view renders the graph as an interactive SVG. Selecting a node reveals
-its metadata and highlights related citation edges.
+The local view offers two coordinated modes:
+
+- `2D citations`: the original quick-scan SVG citation view;
+- `3D entities`: an on-demand Three.js heterogeneous graph with citation and
+  entity edges.
+
+Selecting a node reveals its metadata and highlights related citation edges.
 
 The page also displays a heterogeneous Paper / Author / Topic / Method /
 Dataset / Metric / Claim entity graph. Selecting a paper shows its extracted
@@ -40,6 +45,26 @@ relations, components and density.
 The desktop inspector uses an independent vertical scroll area. Foundational
 paper titles wrap instead of being truncated, and paper details plus entity
 chips remain reachable without moving the graph or page body.
+
+## 3D entity graph
+
+The 3D canvas is loaded only after the examiner selects `3D entities`, keeping
+the initial workspace free of the Three.js bundle. It uses distinct geometry and
+color for Paper, Author, Topic, Method, Dataset, Metric and Claim nodes.
+
+- Drag rotates and zooms the camera; wheel zooms.
+- Clicking an entity reveals its related papers, relation names and grounded
+  evidence.
+- Entity-type filters rebuild the visible graph without discarding the current
+  paper selection.
+- `Fit` excludes isolated nodes so one disconnected component cannot shrink the
+  main graph into a corner.
+- Slow auto-rotation starts with the 3D view and can be paused; it is disabled
+  automatically under `prefers-reduced-motion`.
+- The graph uses a white research-paper field, light citation edges, small
+  blue/green entity nodes, paper labels, and a compact live HUD.
+- The 2D view remains available for screenshots, keyboard usage and lower-end
+  clients.
 
 ## Future Work synthesis
 

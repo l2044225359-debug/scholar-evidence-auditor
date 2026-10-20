@@ -152,20 +152,217 @@
 }
 
 .graphPanel {
+  position: relative;
   display: grid;
-  place-items: center;
+  grid-template-rows: auto auto minmax(0, 1fr);
   align-self: start;
+  height: clamp(560px, 62vh, 720px);
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--border-strong);
   background: var(--surface);
 }
 
+.graphHud {
+  position: absolute;
+  left: 14px;
+  bottom: 14px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 28px);
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+  pointer-events: none;
+}
+
+.graphHud span {
+  white-space: nowrap;
+}
+
+.graphHud strong {
+  min-width: 0;
+  overflow: hidden;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-strong);
+  color: var(--text);
+  font-family: var(--font-display);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graphToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 9px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-muted);
+}
+
+.viewSwitch {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+}
+
+.viewSwitch button,
+.graphActions button,
+.graphFilters button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 28px;
+  border: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted-strong);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.viewSwitch button {
+  min-width: 82px;
+  padding: 0 10px;
+}
+
+.viewSwitch button:last-child,
+.graphFilters button:last-child {
+  border-right: 0;
+}
+
+.viewSwitch button:hover,
+.graphActions button:hover,
+.graphFilters button:hover {
+  background: var(--accent-soft);
+}
+
+.viewSwitch button.viewActive,
+.graphActions button.actionActive,
+.graphFilters button.filterActive {
+  background: var(--accent);
+  color: #fff;
+}
+
+.viewSwitch button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.graphActions {
+  display: inline-flex;
+  border: 1px solid var(--border-strong);
+}
+
+.graphActions button {
+  min-width: 68px;
+  padding: 0 8px;
+}
+
+.graphFilters {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  scrollbar-width: thin;
+}
+
+.graphFilters > span {
+  flex: 0 0 auto;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.graphFilters button {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 8px;
+  border-left: 1px solid var(--border);
+  border-right: 0;
+}
+
+.graphFilters button:disabled {
+  cursor: default;
+}
+
 .graph {
   display: block;
   width: 100%;
-  height: clamp(560px, 62vh, 720px);
-  min-height: 0;
+  height: 100%;
+}
+
+:global(.graph3d-canvas) {
+  position: relative;
+  min-width: 0;
+  min-height: 560px;
+  overflow: hidden;
+  outline: 0;
+  background: var(--surface);
+}
+
+:global(.graph3d-canvas canvas) {
+  display: block;
+}
+
+:global(.graph3d-canvas:focus-visible) {
+  outline: 2px solid var(--rubric);
+  outline-offset: -2px;
+}
+
+:global(.graph3d-tooltip) {
+  display: grid;
+  gap: 3px;
+  max-width: 280px;
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+:global(.graph3d-tooltip b) {
+  font-family: var(--font-display);
+  font-size: 12px;
+}
+
+:global(.graph3d-tooltip span) {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+:global(.graph3d-error) {
+  display: grid;
+  place-items: center;
+  min-height: 560px;
+  padding: 20px;
+  color: var(--danger);
+  font-size: 10px;
+  text-align: center;
+}
+
+.graph3dLoading {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 560px;
+  color: var(--muted);
+  font-size: 9px;
 }
 
 .edge {
@@ -366,6 +563,53 @@
   margin-top: 10px;
 }
 
+.entityEvidenceList {
+  display: grid;
+  margin-top: 10px;
+}
+
+.entityEvidenceList button {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 8px 3px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+.entityEvidenceList button:last-child {
+  border-bottom: 0;
+}
+
+.entityEvidenceList button:hover {
+  background: var(--accent-soft);
+}
+
+.entityEvidenceList strong {
+  font-family: var(--font-display);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.entityEvidenceList span {
+  color: var(--rubric);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+}
+
+.entityEvidenceList small {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
 .entityGroup {
   display: grid;
   gap: 5px;
@@ -499,5 +743,44 @@
   .graph {
     height: clamp(420px, 58vh, 560px);
     min-height: 0;
+  }
+
+  .graphPanel {
+    height: clamp(420px, 58vh, 560px);
+  }
+
+  :global(.graph3d-canvas),
+  :global(.graph3d-error),
+  .graph3dLoading {
+    min-height: 420px;
+  }
+
+  .graphToolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .viewSwitch,
+  .graphActions {
+    width: 100%;
+  }
+
+  .viewSwitch button,
+  .graphActions button {
+    flex: 1;
+  }
+
+  .graphHud {
+    right: 14px;
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewSwitch button,
+  .graphActions button,
+  .graphFilters button,
+  .entityEvidenceList button {
+    transition: none;
   }
 }

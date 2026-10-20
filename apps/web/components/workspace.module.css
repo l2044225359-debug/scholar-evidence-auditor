@@ -896,6 +896,24 @@
   white-space: nowrap;
 }
 
+.evidenceBadges {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.evidenceTypeBadge {
+  padding: 2px 5px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-muted);
+  color: var(--muted-strong);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .pageBadge {
   flex: 0 0 auto;
   padding: 2px 5px;
@@ -923,6 +941,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
   padding-top: 8px;
@@ -937,6 +956,13 @@
   gap: 4px;
   color: var(--accent);
   font-weight: 700;
+}
+
+.bboxLabel {
+  color: var(--muted);
+  font-family: "Cascadia Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
 }
 
 .railEmpty {

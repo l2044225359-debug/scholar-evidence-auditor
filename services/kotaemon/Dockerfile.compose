@@ -1,0 +1,55 @@
+# syntax=docker/dockerfile:1.7
+
+FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONIOENCODING=UTF-8
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV UV_LINK_MODE=copy
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cargo \
+        curl \
+        g++ \
+        gcc \
+        git \
+        libgl1 \
+        libglib2.0-0 \
+        libgomp1 \
+        libffi-dev \
+        libmagic1 \
+        libpoppler-dev \
+        libsm6 \
+        libssl-dev \
+        libsqlite3-dev \
+        libxext6 \
+        libxrender1 \
+        make \
+        cmake \
+        pkg-config \
+        poppler-utils \
+        tesseract-ocr \
+        tesseract-ocr-eng \
+        unzip \
+        zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir uv
+
+WORKDIR /app
+COPY . /app
+
+ENV PDFJS_PREBUILT_DIR=/app/libs/ktem/ktem/assets/prebuilt/pdfjs-dist
+RUN bash scripts/download_pdfjs.sh "${PDFJS_PREBUILT_DIR}"
+
+RUN uv sync --frozen --no-dev \
+    && uv pip install --python /app/.venv "libs/kotaemon[docling]"
+
+RUN mkdir -p /app/ktem_app_data
+
+EXPOSE 7860
+CMD ["/app/.venv/bin/python", "/app/app.py"]
